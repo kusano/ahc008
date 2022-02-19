@@ -272,7 +272,34 @@ int main()
         for (int i=0; i<M; i++)
         {
             string moves = field.get_human_moves();
-            string move = moves.substr(xor64()%(int)moves.size(), 1);
+
+            vector<long long> S(moves.size());
+            for (int j=0; j<(int)moves.size(); j++)
+            {
+                for (int k=0; k<8; k++)
+                {
+                    Field field2 = field;
+                    field2.move(moves.substr(j, 1));
+                    for (int t2=t; t2<min(T, t+8); t2++)
+                    {
+                        for (int i2=(t2==t ? i+1 : 0); i2<M; i2++)
+                        {
+                            string t = field2.get_human_moves();
+                            field2.move(t.substr(xor64()%(int)t.size(), 1));
+                        }
+                        for (int i2=0; i2<N; i2++)
+                            field2.move(field2.get_random_pet_move());
+                    }
+                    S[j] += field2.score();
+                }
+            }
+
+            int best = 0;
+            for (int j=1; j<(int)moves.size(); j++)
+                if (S[j]>=S[best])
+                    best = j;
+
+            string move = moves.substr(best, 1);
 
             ans += move;
             field.move(move);
