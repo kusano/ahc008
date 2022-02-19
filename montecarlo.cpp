@@ -33,6 +33,7 @@ struct Field
     vector<vector<int>> H;
     int turn;
     int turn_sub;
+    vector<vector<char>> scoreT;
 
     Field(vector<int> px, vector<int> py, vector<int> pt, vector<int> hx, vector<int> hy)
         : N(int(px.size()))
@@ -47,6 +48,7 @@ struct Field
         , H(S, vector<int>(S))
         , turn(0)
         , turn_sub(0)
+        , scoreT(S, vector<char>(S))
     {
         hx_old.resize(M);
         hy_old.resize(M);
@@ -194,6 +196,51 @@ struct Field
             turn++;
         }
     }
+
+    long long score()
+    {
+        for (int y=0; y<S; y++)
+            for (int x=0; x<S; x++)
+                scoreT[y][x] = 0;
+
+        long long score = 0;
+        for (int i=0; i<M; i++)
+        {
+            int x = hx[i];
+            int y = hy[i];
+            int cn = 0;
+            int hn = 0;
+            int pn = 0;
+            if (scoreT[y][x]==0)
+            {
+                score_f(x, y, &cn, &hn, &pn);
+                score += (long long)(cn*hn)<<(N-pn);
+            }
+        }
+        long long denom = (long long)(S*S*M)<<N;
+        score = (score*100000000+denom/2)/denom;
+        return score;
+    }
+
+    void score_f(int x, int y, int *cn, int *hn, int *pn)
+    {
+        if (scoreT[y][x]!=0)
+            return;
+        scoreT[y][x] = 1;
+
+        (*cn)++;
+        *hn += H[y][x];
+        *pn += P[y][x];
+
+        for (int d=0; d<4; d++)
+        {
+            int tx = x+dir_x[d];
+            int ty = y+dir_y[d];
+            if (0<=tx && tx<S && 0<=ty && ty<S &&
+                F[ty][tx]==0)
+                score_f(tx, ty, cn, hn, pn);
+        }
+    }
 };
 
 int main()
@@ -239,4 +286,6 @@ int main()
             field.move(move);
         }
     }
+
+    cerr<<"Score = "<<field.score()<<endl;
 }
