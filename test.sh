@@ -1,6 +1,6 @@
 set -eu
 
-g++ -O2 montecarlo.cpp
+g++ -O2 chase.cpp
 
 pushd tools
 
