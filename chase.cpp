@@ -307,8 +307,8 @@ int main()
                             bool ok = true;
                             for (int d2=0; d2<4; d2++)
                             {
-                                int tx2 = tx+dir_x[d];
-                                int ty2 = ty+dir_y[d];
+                                int tx2 = tx+dir_x[d2];
+                                int ty2 = ty+dir_y[d2];
                                 if (0<=tx2 && tx2<S && 0<=ty2 && ty2<S &&
                                     field.P[ty2][tx2]>0)
                                     ok = false;
