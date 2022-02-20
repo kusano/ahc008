@@ -269,21 +269,10 @@ public:
             if (field.pt[i]==3 || field.pt[i]==4)
                 gate_num++;
         gate_num = min(gate_num, 14);
-        // 犬猫がいないのでゲートを作る意味が無い
-        if (gate_num==1)
-            gate_num = 0;
 
         current_gate = gate_num-1;
 
         states = vector<int>(M);
-        if (gate_num==0)
-        {
-            states[0] = 3;
-            states[1] = 3;
-            states[2] = 2;
-            states[3] = 2;
-            states[4] = 2;
-        }
 
         D = vector<vector<int>>(S, vector<int>(S));
     }
@@ -293,7 +282,9 @@ public:
     {
         //  ゲートに捕獲するか
         bool capture = false;
-        if (current_gate==0)
+        if (current_gate==0 &&
+            field.F[S/2-2][1]==1 &&
+            field.F[S/2+1][1]==1)
         {
             states[0] = 3;
             states[1] = 3;
@@ -462,6 +453,14 @@ public:
         int x = field.hx[h];
         int y = field.hy[h];
 
+        if (gate_num==1)
+            if (field.F[x][y-1]>0)
+                return -1;
+            else
+                if (field.can_block(x, y-1))
+                    return BLOCK_L;
+                else
+                    return STAY;
         if (y==gate_num*2-2)
             if (field.F[x][y-1]>0 && field.F[x][y+1]>0)
                 return -1;
@@ -567,17 +566,14 @@ public:
                 {
                     //  ゲート設置を邪魔しないか確認
                     bool ok = true;
-                    if (gate_num>0)
-                    {
-                        if (S/2-4<=tx && tx<S/2+4 &&
-                            (ty<current_gate*2+2))
+                    if (S/2-4<=tx && tx<S/2+4 &&
+                        (ty<current_gate*2+2))
+                        ok = false;
+                    if ((tx==S/2 || tx==S/2+1) ||
+                        ty>=gate_num*2)
+                        if (states[4]==0 ||
+                            states[4]==1 && ty<=field.hy[4])
                             ok = false;
-                        if ((tx==S/2 || tx==S/2+1) ||
-                            ty>=gate_num*2)
-                            if (states[4]==0 ||
-                                states[4]==1 && ty<=field.hy[4])
-                                ok = false;
-                    }
                     if (ok)
                     {
                         //  通行不可にしたことで人が閉じ込められるなら不可
