@@ -283,7 +283,7 @@ class AI
     //  人iは実際には人P[i]
     vector<int> P;
     vector<int> states;
-    vector<vector<int>> D;
+    vector<vector<int>> D, D2;
 
 public:
     AI(Field field):
@@ -341,7 +341,7 @@ public:
         for (int h=5; h<M; h++)
             states[h] = STATE_CHASE;
 
-        D = vector<vector<int>>(S, vector<int>(S));
+        D = D2 = vector<vector<int>>(S, vector<int>(S));
     }
 
     //  全員分の動きを返す
@@ -447,14 +447,26 @@ public:
                     else
                         move = BLOCK_U;
                 else
+                {
                     if (h==0)
                         move = field.toward(S/2-4, current_gate*2);
                     else
                         move = field.toward(S/2+3, current_gate*2);
+                    if (move==-1)
+                        move = STAY;
+                }
             }
             if (states[h]==STATE_CHASE)
             {
                 move = get_moves_chase(field);
+            }
+
+            //  最後16ターンはスコアを上げられるなら上げる
+            if (field.turn>=T-16)
+            {
+                int m = get_moves_score_up(field);
+                if (m!=STAY)
+                    move = m;
             }
 
             field.move({move});
@@ -627,12 +639,15 @@ public:
                     if (ok)
                     {
                         //  通行不可にしたことで人が閉じ込められるなら不可
+                        field.get_distances(S/2, 0, &D);
                         field.F[tx][ty] = 1;
+                        field.get_distances(S/2, 0, &D2);
+                        field.F[tx][ty] = 0;
                         bool ok = true;
                         for (int h=0; h<M && ok; h++)
-                            if (field.toward(field.hx[h], field.hy[h], S/2, 0)==-1)
+                            if (D[field.hx[h]][field.hy[h]]<oo &&
+                                D2[field.hx[h]][field.hy[h]]==oo)
                                 ok = false;
-                        field.F[tx][ty] = 0;
                         if (ok)
                             moves.push_back(d+4);
                     }
@@ -657,6 +672,37 @@ public:
             return STAY;
         else
             return moves[xor64()%(int)moves.size()];
+    }
+
+    //  通行不可にすることでスコアを上げられるなら、通行不可にする
+    int get_moves_score_up(Field &field)
+    {
+        int h = field.turn_sub;
+        int hx = field.hx[h];
+        int hy = field.hy[h];
+
+        long long score = field.score();
+        int move = STAY;
+
+        for (int d=0; d<4; d++)
+        {
+            int tx = hx+dir_x[d];
+            int ty = hy+dir_y[d];
+            if (0<=tx && tx<S && 0<=ty && ty<S &&
+                field.can_block(tx, ty))
+            {
+                field.F[tx][ty] = 1;
+                long long s = field.score();
+                field.F[tx][ty] = 0;
+                if (s>score)
+                {
+                    score = s;
+                    move = d+4;
+                }
+            }
+        }
+
+        return move;
     }
 };
 
