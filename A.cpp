@@ -330,10 +330,6 @@ public:
                 P.push_back(i);
         }
 
-        for (int p: P)
-            cerr<<" "<<p;
-        cerr<<endl;
-
         states = vector<int>(M);
 
         D = vector<vector<int>>(S, vector<int>(S));
@@ -609,10 +605,10 @@ public:
                 int x = field.px[p];
                 int y = field.py[p];
                 //  犬猫はゲートで捕まえるので狙わない。
-                if ((field.pt[p]!=3 || field.pt[p]!=4) &&
+                if ((field.pt[p]!=3 && field.pt[p]!=4) &&
                     D[x][y]<oo &&
                     (up_down==0 && x<S/2 ||
-                        up_down==1 && x>=S/2))
+                     up_down==1 && x>=S/2))
                 {
                     int d = abs(x-(S-1)*up_down)+abs(y-(S-1));
                     if (d<dmin)
