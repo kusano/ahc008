@@ -294,9 +294,9 @@ public:
 
         //  人を割り当てる。
         //  ゲートができるまで機能しないので、途中から離れる人を優先する。
-        vector<int> idx{4,   2,     3,     0,     1    };
-        vector<int> gx {S/2, S/2-2, S/2+1, S/2-1, S/2  };
-        vector<int> gy {S-2, 2,     2,     2,     2    };
+        vector<int> idx{4,     2,     3,     0,     1    };
+        vector<int> gx {S/2-1, S/2-2, S/2+1, S/2-1, S/2  };
+        vector<int> gy {S-2,   2,     2,     2,     2    };
         vector<bool> U(M);
         P.resize(5);
         for (int i=0; i<5; i++)
@@ -564,16 +564,16 @@ public:
         if (y%2!=0)
             return MOVE_L;
         else
-            if (field.F[x-1][y]>0 && field.F[x][y+1]>0)
+            if (field.F[x][y+1]>0 && field.F[x+1][y]>0)
                 if (y==gate_num*2)
                     return -1;
                 else
                     return MOVE_L;
             else
-                if (field.can_block(x-1, y))
-                    return BLOCK_U;
-                else if (field.can_block(x, y+1))
+                if (field.can_block(x, y+1))
                     return BLOCK_R;
+                else if (field.can_block(x+1, y))
+                    return BLOCK_D;
                 else
                     return STAY;
     }
@@ -637,10 +637,14 @@ public:
                     //  ゲート設置を邪魔しないか確認
                     bool ok = true;
                     if (S/2-4<=tx && tx<S/2+4 &&
-                        (ty<current_gate*2+2))
+                        ty<current_gate*2+2)
                         ok = false;
-                    if ((tx==S/2 || tx==S/2+1) ||
-                        ty>=gate_num*2)
+                    if (tx==S/2-1 || tx==S/2)
+                        ok = false;
+                    //  x=S/2-2を通行不可にしない。
+                    //  この処理にバグがあるのか、たまたまなのか不明。
+                    if (tx==S/2-2 &&
+                        gate_num*2<=ty)
                         if (states[4]==0 ||
                             states[4]==1 && ty<=field.hy[4])
                             ok = false;
