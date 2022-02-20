@@ -200,6 +200,56 @@ struct Field
             }
         }
     }
+
+    long long score()
+    {
+        for (int y=0; y<S; y++)
+            for (int x=0; x<S; x++)
+                D[x][y] = 0;
+
+        long long score = 0;
+        for (int i=0; i<M; i++)
+        {
+            int ox = hx[i];
+            int oy = hy[i];
+            if (D[ox][oy]==0)
+            {
+                int cn = 0;
+                int hn = 0;
+                int pn = 0;
+
+                Q.clear();
+                Q.push_back({ox, oy});
+                for (int q=0; q<(int)Q.size(); q++)
+                {
+                    int x = Q[q].first;
+                    int y = Q[q].second;
+
+                    if (D[x][y]==1)
+                        continue;
+                    D[x][y] = 1;
+                    cn++;
+                    hn += H[x][y];
+                    pn += P[x][y];
+
+                    for (int d=0; d<4; d++)
+                    {
+                        int tx = x+dir_x[d];
+                        int ty = y+dir_y[d];
+                        if (0<=tx && tx<S && 0<=ty && ty<S &&
+                            F[tx][ty]==0 &&
+                            D[tx][ty]==0)
+                            Q.push_back({tx, ty});
+                    }
+                }
+
+                score += (long long)(cn*hn)<<(N-pn);
+            }
+        }
+        long long denom = (long long)(S*S*M)<<N;
+        score = (score*100000000+denom/2)/denom;
+        return score;
+    }
 };
 
 class AI
@@ -619,4 +669,6 @@ int main()
             field.move(movei);
         }
     }
+    long long score = field.score();
+    fprintf(stderr, "Score: %7.4f %%\n", score*1e-8*100);
 }
