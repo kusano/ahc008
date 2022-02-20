@@ -1,6 +1,6 @@
 set -eu
 
-g++ -O2 chase.cpp
+g++ -O2 A.cpp
 
 pushd tools
 
