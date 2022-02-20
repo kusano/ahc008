@@ -272,6 +272,11 @@ struct Field
 
 class AI
 {
+    static const int STATE_PREPARE = 0;     //  ゲート設置の開始位置に向かう
+    static const int STATE_GATE    = 1;     //  ゲート設置
+    static const int STATE_TRAP    = 2;     //  ゲートにペットを閉じ込める
+    static const int STATE_CHASE   = 3;     //  ペットを追う
+
     int N, M;
     int gate_num;
     int current_gate;
@@ -331,6 +336,10 @@ public:
         }
 
         states = vector<int>(M);
+        for (int h=0; h<5; h++)
+            states[0] = STATE_PREPARE;
+        for (int h=5; h<M; h++)
+            states[h] = STATE_CHASE;
 
         D = vector<vector<int>>(S, vector<int>(S));
     }
@@ -348,10 +357,13 @@ public:
             field.F[S/2  ][1]==1 &&
             field.F[S/2+1][1]==1)
         {
-            states[0] = 3;
-            states[1] = 3;
+            states[0] = STATE_CHASE;
+            states[1] = STATE_CHASE;
         }
-        if (states[0]==2 && states[1]==2 && states[2]>=2 && states[3]>=2)
+        if (states[0]==STATE_TRAP &&
+            states[1]==STATE_TRAP &&
+            states[2]==STATE_CHASE &&
+            states[3]==STATE_CHASE)
         {
             //  ゲートに入りうる犬猫がいるかを確認
             bool ok = false;
@@ -361,8 +373,8 @@ public:
                         ok = true;
             if (!ok)
             {
-                states[0] = 3;
-                states[1] = 3;
+                states[0] = STATE_CHASE;
+                states[1] = STATE_CHASE;
                 current_gate = 0;
             }
             else
@@ -399,106 +411,50 @@ public:
 
         for (int h=0; h<M; h++)
         {
-            int move = 0;
-            switch (h)
+            int move = -1;
+            if (states[h]==STATE_PREPARE)
             {
-            case 0:
-                if (states[h]==0)
+                switch (h)
                 {
-                    move = field.toward(S/2-1, 2);
-                    if (move==STAY)
-                        states[h] = 1;
+                case 0: move = field.toward(S/2-1, 2  ); break;
+                case 1: move = field.toward(S/2 ,  2  ); break;
+                case 2: move = field.toward(S/2-2, 2  ); break;
+                case 3: move = field.toward(S/2+1, 2  ); break;
+                case 4: move = field.toward(S/2-1, S-2); break;
                 }
-                if (states[h]==1)
-                {
+                if (move==STAY)
+                    states[h] = STATE_GATE;
+            }
+            if (states[h]==STATE_GATE)
+            {
+                if (h<4)
                     move = get_moves_gate(field);
-                    if (move==-1)
-                        states[h] = 2;
-                }
-                if (states[h]==2)
+                else
+                    move = get_moves_fence(field);
+                if (move==-1)
                 {
-                    if (capture)
+                    if (h==0 || h==1)
+                        states[h] = STATE_TRAP;
+                    else
+                        states[h] = STATE_CHASE;
+                }
+            }
+            if (states[h]==STATE_TRAP)
+            {
+                if (capture)
+                    if (h==0)
                         move = BLOCK_D;
                     else
-                        move = field.toward(S/2-4, current_gate*2);
-                }
-                if (states[h]==3)
-                    move = get_moves_chase(field);
-                break;
-            case 1:
-                if (states[h]==0)
-                {
-                    move = field.toward(S/2, 2);
-                    if (move==STAY)
-                        states[h]=1;
-                }
-                if (states[h]==1)
-                {
-                    move = get_moves_gate(field);
-                    if (move==-1)
-                        states[h] = 2;
-                }
-                if (states[h]==2)
-                {
-                    if (capture)
                         move = BLOCK_U;
+                else
+                    if (h==0)
+                        move = field.toward(S/2-4, current_gate*2);
                     else
                         move = field.toward(S/2+3, current_gate*2);
-                }
-                if (states[h]==3)
-                    move = get_moves_chase(field);
-                break;
-            case 2:
-                if (states[h]==0)
-                {
-                    move = field.toward(S/2-2, 2);
-                    if (move==STAY)
-                        states[h]=1;
-                }
-                if (states[h]==1)
-                {
-                    move = get_moves_gate(field);
-                    if (move==-1)
-                        states[h] = 2;
-                }
-                if (states[h]==2)
-                    move = get_moves_chase(field);
-                break;
-            case 3:
-                if (states[h]==0)
-                {
-                    move = field.toward(S/2+1, 2);
-                    if (move==8)
-                        states[h]=1;
-                }
-                if (states[h]==1)
-                {
-                    move = get_moves_gate(field);
-                    if (move==-1)
-                        states[h] = 2;
-                }
-                if (states[h]==2)
-                    move = get_moves_chase(field);
-                break;
-            case 4:
-                if (states[h]==0)
-                {
-                    move = field.toward(S/2-1, S-2);
-                    if (move==STAY)
-                        states[h]=1;
-                }
-                if (states[h]==1)
-                {
-                    move = get_moves_fence(field);
-                    if (move==-1)
-                        states[h] = 2;
-                }
-                if (states[h]==2)
-                    move = get_moves_chase(field);
-                break;
-            default:
+            }
+            if (states[h]==STATE_CHASE)
+            {
                 move = get_moves_chase(field);
-                break;
             }
 
             field.move({move});
