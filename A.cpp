@@ -630,7 +630,7 @@ public:
 
         vector<int> moves;
 
-        if (pd<2)
+        if (pd<=1)
         {
             //  離れる
             for (int d=0; d<4; d++)
@@ -643,7 +643,9 @@ public:
                     moves.push_back(d);
             }
         }
-        else if (pd==2 || pd==3)
+        else if (pd==2)
+            ;
+        else if (pd==3)
         {
             //  通行不可にする
             for (int d=0; d<4; d++)
