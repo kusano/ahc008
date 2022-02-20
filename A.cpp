@@ -2,6 +2,7 @@
 #include <vector>
 #include <string>
 #include <utility>
+#include <functional>
 using namespace std;
 
 int xor64() {
@@ -67,6 +68,23 @@ struct Field
             H[hx[i]][hy[i]]++;
         for (int i=0; i<N; i++)
             P[px[i]][py[i]]++;
+    }
+
+    //  i番目の人を操作しようとしたとき、P[i]番目の人を操作するようにする。
+    void permutate(vector<int> P)
+    {
+        vector<int> tmp_hx = hx;
+        vector<int> tmp_hy = hy;
+        vector<int> tmp_hx_old = hx_old;
+        vector<int> tmp_hy_old = hy_old;
+        for (int i=0; i<M; i++)
+            for (int j=0; j<M; j++)
+            {
+                hx[i] = tmp_hx[P[i]];
+                hy[i] = tmp_hy[P[i]];
+                hx_old[i] = tmp_hx_old[P[i]];
+                hy_old[i] = tmp_hy_old[P[i]];
+            }
     }
 
     void move(vector<int> move)
@@ -257,6 +275,8 @@ class AI
     int N, M;
     int gate_num;
     int current_gate;
+    //  人iは実際には人P[i]
+    vector<int> P;
     vector<int> states;
     vector<vector<int>> D;
 
@@ -272,6 +292,48 @@ public:
 
         current_gate = gate_num-1;
 
+        //  人を割り当てる。
+        //  ゲートができるまで機能しないので、途中から離れる人を優先する。
+        vector<int> idx{4,   2,     3,     0,     1    };
+        vector<int> gx {S/2, S/2-2, S/2+1, S/2-1, S/2  };
+        vector<int> gy {S-2, 2,     2,     2,     2    };
+        vector<bool> U(M);
+        P.resize(5);
+        for (int i=0; i<5; i++)
+        {
+            int dmin = oo;
+            int h;
+            for (int j=0; j<M; j++)
+                if (!U[j])
+                {
+                    int d = abs(field.hx[j]-gx[i])+abs(field.hy[j]-gy[i]);
+                    if (d<dmin)
+                    {
+                        dmin = d;
+                        h = j;
+                    }
+                }
+            P[idx[i]] = h;
+            U[h] = true;
+        }
+        for (int i=0; i<M; i++)
+            if (!U[i])
+                P.push_back(i);
+
+        for (int i=0; i<M; i++)
+        {
+            bool ok = true;
+            for (int x: P)
+                if (x==i)
+                    ok = false;
+            if (ok)
+                P.push_back(i);
+        }
+
+        for (int p: P)
+            cerr<<" "<<p;
+        cerr<<endl;
+
         states = vector<int>(M);
 
         D = vector<vector<int>>(S, vector<int>(S));
@@ -280,6 +342,8 @@ public:
     //  全員分の動きを返す
     vector<int> get_moves(Field field)
     {
+        field.permutate(P);
+
         //  ゲートに捕獲するか
         bool capture = false;
         if (current_gate==0 &&
@@ -343,7 +407,7 @@ public:
             case 0:
                 if (states[h]==0)
                 {
-                    move = field.toward(S/2-2, 2);
+                    move = field.toward(S/2-1, 2);
                     if (move==STAY)
                         states[h] = 1;
                 }
@@ -366,7 +430,7 @@ public:
             case 1:
                 if (states[h]==0)
                 {
-                    move = field.toward(S/2+1, 2);
+                    move = field.toward(S/2, 2);
                     if (move==STAY)
                         states[h]=1;
                 }
@@ -389,7 +453,7 @@ public:
             case 2:
                 if (states[h]==0)
                 {
-                    move = field.toward(S/2-1, 2);
+                    move = field.toward(S/2-2, 2);
                     if (move==STAY)
                         states[h]=1;
                 }
@@ -405,7 +469,7 @@ public:
             case 3:
                 if (states[h]==0)
                 {
-                    move = field.toward(S/2, 2);
+                    move = field.toward(S/2+1, 2);
                     if (move==8)
                         states[h]=1;
                 }
@@ -442,6 +506,12 @@ public:
             field.move({move});
             moves[h] = move;
         }
+
+        //  並べ替え
+        vector<int> moves2(M);
+        for (int i=0; i<M; i++)
+            moves2[P[i]] = moves[i];
+        moves = moves2;
 
         return moves;
     }

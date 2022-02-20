@@ -1,6 +1,6 @@
 set -eu
 
-g++ -O2 A.cpp
+g++ -O2 -std=c++17 A.cpp
 
 pushd tools
 
