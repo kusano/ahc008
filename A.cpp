@@ -346,9 +346,6 @@ public:
 
         for (int h=0; h<M; h++)
         {
-            int x = field.hx[h];
-            int y = field.hy[h];
-
             int move = 0;
             switch (h)
             {
@@ -669,6 +666,23 @@ int main()
             field.move(movei);
         }
     }
+
+    fprintf(stderr, "Number of humans: %2d\n", M);
+    int PC[5] = {};
+    for (int i=0; i<N; i++)
+        PC[field.pt[i]]++;
+    fprintf(stderr, "Number of pets:   %2d (%2d, %2d, %2d, %2d, %2d)\n",
+        N, PC[0], PC[1], PC[2], PC[3], PC[4]);
+    int UPC[5] = {};
+    int s = 0;
+    for (int p=0; p<N; p++)
+        if (field.toward(field.px[p], field.py[p], S/2, 0)!=-1)
+        {
+            UPC[field.pt[p]]++;
+            s++;
+        }
+    fprintf(stderr, "Uncaptured pets:  %2d (%2d, %2d, %2d, %2d, %2d)\n",
+        s, UPC[0], UPC[1], UPC[2], UPC[3], UPC[4]);
     long long score = field.score();
     fprintf(stderr, "Score: %7.4f %%\n", score*1e-8*100);
 }
