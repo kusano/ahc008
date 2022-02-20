@@ -289,7 +289,7 @@ public:
             states[0] = 3;
             states[1] = 3;
         }
-        if (states[0]==2 && states[1]==2)
+        if (states[0]==2 && states[1]==2 && states[2]>=2 && states[3]>=2)
         {
             //  ゲートに入りうる犬猫がいるかを確認
             bool ok = false;
