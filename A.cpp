@@ -487,8 +487,8 @@ public:
             case 4:
                 if (states[h]==0)
                 {
-                    move = field.toward(S/2, S-2);
-                    if (move==8)
+                    move = field.toward(S/2-1, S-2);
+                    if (move==STAY)
                         states[h]=1;
                 }
                 if (states[h]==1)
@@ -665,8 +665,6 @@ public:
                         ok = false;
                     if (tx==S/2-1 || tx==S/2)
                         ok = false;
-                    //  x=S/2-2を通行不可にしない。
-                    //  この処理にバグがあるのか、たまたまなのか不明。
                     if (tx==S/2-2 &&
                         gate_num*2<=ty)
                         if (states[4]==0 ||
@@ -682,10 +680,7 @@ public:
                                 ok = false;
                         field.F[tx][ty] = 0;
                         if (ok)
-                        {
-                            field.F[tx][ty] = 0;
                             moves.push_back(d+4);
-                        }
                     }
                 }
             }
