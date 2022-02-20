@@ -348,6 +348,8 @@ public:
         bool capture = false;
         if (current_gate==0 &&
             field.F[S/2-2][1]==1 &&
+            field.F[S/2-1][1]==1 &&
+            field.F[S/2  ][1]==1 &&
             field.F[S/2+1][1]==1)
         {
             states[0] = 3;
