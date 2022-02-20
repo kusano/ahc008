@@ -590,17 +590,39 @@ public:
         field.get_distances(hx, hy, &D);
 
         //  目標選択
-        //  犬猫以外で最も近いペット
+        //  偶数番目の人は上半分、奇数番目の人は下半分のペット。
+        //  偶数番目の人は右上、奇数番目は右下に近いペットを優先する。
+        //  上半分／下半分の全てのペットが捕獲済みなら、下半分／上半分に向かう。
         int target = -1;
-        for (int p=0; p<N; p++)
-            if (field.pt[p]!=3 && field.pt[p]!=4)
+        for (int i=0; i<2 && target==-1; i++)
+        {
+            int up_down;
+            if (i==0 && h%2==0 ||
+                i==1 && h%2!=0)
+                up_down = 0;
+            else
+                up_down = 1;
+
+            int dmin = oo;
+            for (int p=0; p<N; p++)
             {
                 int x = field.px[p];
                 int y = field.py[p];
-                if (D[x][y]<oo &&
-                    (target==-1 || D[x][y]<D[field.px[target]][field.py[target]]))
-                    target = p;
+                //  犬猫はゲートで捕まえるので狙わない。
+                if ((field.pt[p]!=3 || field.pt[p]!=4) &&
+                    D[x][y]<oo &&
+                    (up_down==0 && x<S/2 ||
+                        up_down==1 && x>=S/2))
+                {
+                    int d = abs(x-(S-1)*up_down)+abs(y-(S-1));
+                    if (d<dmin)
+                    {
+                        dmin = d;
+                        target = p;
+                    }
+                }
             }
+        }
         if (target==-1)
             return STAY;
 
