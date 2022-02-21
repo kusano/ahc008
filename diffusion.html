@@ -1,0 +1,123 @@
+<html lang="ja">
+  <head>
+    <title>AHC008</title>
+    <style>
+      .cell{
+        position: absolute;
+        width: 24px;
+        height: 24px;
+        border: solid 1px #ccc;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>AHC008</h1>
+    <select id="type" style="font-size: xx-large">
+      <option value="0">🐮</option>
+      <option value="1">🐷</option>
+      <option value="2">🐰</option>
+      <option value="3">🐶</option>
+      <option value="4">🐱</option>
+      <option value="5">🚪</option>
+      <option value="6">　</option>
+    </select>
+    <select id="turn" style="font-size: xx-large">
+    </select>
+    <div id="canvas" style="position: relative">
+    </div>
+    <script>
+for (var i=1; i<=300; i++) {
+  turn.innerHTML += `<option value="${i}">${i}</option>`;
+}
+turn.addEventListener("change", update);
+
+function array() {
+  var A = new Array(30);
+  for (var x=0; x<30; x++) {
+    A[x] = new Array(30);
+    for (var y=0; y<30; y++) {
+      A[x][y] = 0;
+    }
+  }
+  return A;
+}
+
+var field = array();
+for (var x=0; x<30; x++) {
+  for (var y=0; y<30; y++) {
+    field[x][y] = 6;
+  }
+}
+
+function click_(x, y) {
+  var v = +type.value;
+  if (field[x][y]==v) {
+    field[x][y] = 6;
+  } else {
+    field[x][y] = v;
+  }
+  update();
+}
+
+function update() {
+  var S = array();
+  for (var ox=0; ox<30; ox++) {
+    for (var oy=0; oy<30; oy++) {
+      if (field[ox][oy]<5) {
+        var T = array();
+        T[ox][oy] = 1;
+        for (var t=0; t<(+turn.value)*[1, 2, 3, 2, 2][field[ox][oy]]; t++) {
+          var P = T;
+          T = array();
+          for (var x=0; x<30; x++) {
+            for (var y=0; y<30; y++) {
+              n = 0;
+              for (var d=0; d<4; d++) {
+                var tx = x+[1, -1, 0, 0][d];
+                var ty = y+[0, 0, 1, -1][d];
+                if (0<=tx && tx<30 && 0<=ty && ty<30 && field[tx][ty]!=5) {
+                  n++;
+                }
+              }
+              for (var d=0; d<4; d++) {
+                var tx = x+[1, -1, 0, 0][d];
+                var ty = y+[0, 0, 1, -1][d];
+                if (0<=tx && tx<30 && 0<=ty && ty<30 && field[tx][ty]!=5) {
+                  T[tx][ty] += P[x][y]/n;
+                }
+              }
+            }
+          }
+        }
+        for (var x=0; x<30; x++) {
+          for (var y=0; y<30; y++) {
+            S[x][y] += T[x][y];
+          }
+        }
+      }
+    }
+  }
+
+  canvas.innerHTML = "";
+  m = 0;
+  for (var x=0; x<30; x++) {
+    for (var y=0; y<30; y++) {
+      m = Math.max(m, S[x][y]);
+    }
+  }
+  if (m==0)
+    m = 1;
+  for (var x=0; x<30; x++) {
+    for (var y=0; y<30; y++) {
+      var v = Math.min(255, Math.max(0, (1-S[x][y]/m)*255|0));
+      canvas.innerHTML += `
+        <div class="cell" style="top: ${x*24}px; left: ${y*24}px; background-color: rgb(255, ${v}, ${v})" onclick="click_(${x}, ${y})">
+          ${["🐮", "🐷", "🐰", "🐶", "🐱", "🚪", "　"][field[x][y]]}
+        </div>`;
+    }
+  }
+}
+update();
+    </script>
+  </body>
+</html>
