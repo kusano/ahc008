@@ -609,7 +609,11 @@ public:
 
         vector<int> moves;
 
-        if (pd<=1)
+        //  通行不可にする距離
+        int block_dist[5] = {3, 3, 3, 0, 0};
+        int bd = block_dist[field.pt[target]];
+
+        if (pd<=bd-2)
         {
             //  離れる
             for (int d=0; d<4; d++)
@@ -622,9 +626,9 @@ public:
                     moves.push_back(d);
             }
         }
-        else if (pd==2)
+        else if (pd==bd-1)
             ;
-        else if (pd==3)
+        else if (pd==bd)
         {
             //  通行不可にする
             for (int d=0; d<4; d++)
