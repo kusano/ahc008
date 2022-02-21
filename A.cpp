@@ -284,6 +284,9 @@ class AI
     vector<int> P;
     vector<int> states;
     vector<vector<int>> D, D2;
+    //  上半分／下半分で狙うペット
+    int target_up = -1;
+    int target_down = -1;
 
 public:
     AI(Field field):
@@ -551,50 +554,58 @@ public:
         int hx = field.hx[h];
         int hy = field.hy[h];
 
-        field.get_distances(hx, hy, &D);
-
         //  目標選択
         //  偶数番目の人は上半分、奇数番目の人は下半分のペット。
         //  偶数番目の人は右上、奇数番目は右下に近いペットを優先する。
         //  上半分／下半分の全てのペットが捕獲済みなら、下半分／上半分に向かう。
-        int target = -1;
-        for (int i=0; i<2 && target==-1; i++)
-        {
-            int up_down;
-            if (i==0 && h%2==0 ||
-                i==1 && h%2!=0)
-                up_down = 0;
-            else
-                up_down = 1;
+        int &target = h%2==0 ? target_up : target_down;
 
-            int dmin = oo;
-            for (int p=0; p<N; p++)
+        field.get_distances(S/2, 0, &D);
+
+        if (target!=-1 &&
+            D[field.px[target]][field.py[target]]==oo)
+            target = -1;
+        if (target==-1)
+        {
+            for (int i=0; i<2 && target==-1; i++)
             {
-                int x = field.px[p];
-                int y = field.py[p];
-                //  犬猫はゲートで捕まえるので狙わない。
-                if ((field.pt[p]!=3 && field.pt[p]!=4) &&
-                    D[x][y]<oo &&
-                    (up_down==0 && x<S/2 ||
-                     up_down==1 && x>=S/2))
+                int up_down;
+                if (i==0 && h%2==0 ||
+                    i==1 && h%2!=0)
+                    up_down = 0;
+                else
+                    up_down = 1;
+
+                int dmin = oo;
+                for (int p=0; p<N; p++)
                 {
-                    int d = abs(x-(S-1)*up_down)+abs(y-(S-1));
-                    if (d<dmin)
+                    int x = field.px[p];
+                    int y = field.py[p];
+                    //  犬猫はゲートで捕まえるので狙わない。
+                    if ((field.pt[p]!=3 && field.pt[p]!=4) &&
+                        D[x][y]<oo &&
+                        (up_down==0 && x<S/2 ||
+                         up_down==1 && x>=S/2))
                     {
-                        dmin = d;
-                        target = p;
+                        int d = abs(x-(S-1)*up_down)+abs(y-(S-1));
+                        if (d<dmin)
+                        {
+                            dmin = d;
+                            target = p;
+                        }
                     }
                 }
             }
         }
+
         if (target==-1)
             return STAY;
 
         int px = field.px[target];
         int py = field.py[target];
-        int pd = D[px][py];
 
         field.get_distances(px, py, &D);
+        int pd = D[hx][hy];
 
         vector<int> moves;
 
