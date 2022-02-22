@@ -3,6 +3,7 @@
 #include <string>
 #include <utility>
 #include <functional>
+#include <algorithm>
 using namespace std;
 
 int xor64() {
@@ -332,9 +333,22 @@ public:
             P[idx[i]] = h;
             U[h] = true;
         }
+        //  残りの人は、上に近い人を偶数、下に近い人を奇数に振り分ける。
+        vector<pair<int, int>> V;
         for (int i=0; i<M; i++)
             if (!U[i])
-                P.push_back(i);
+                V.push_back({field.hx[i], i});
+        sort(V.begin(), V.end());
+        while (!V.empty())
+        {
+            P.push_back(V.back().second);
+            V.pop_back();
+            if (!V.empty())
+            {
+                P.push_back(V.front().second);
+                V.erase(V.begin());
+            }
+        }
 
         for (int i=0; i<M; i++)
         {
