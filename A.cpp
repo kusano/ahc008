@@ -608,22 +608,34 @@ public:
         }
         */
 
-        //  最も近いペット
+        //  上半分／下半分で最も近いペット
         int target = -1;
 
         field.get_distances(hx, hy, &D);
 
-        int dmin = oo;
-        for (int p=0; p<N; p++)
+        for (int i=0; i<2 && target==-1; i++)
         {
-            int x = field.px[p];
-            int y = field.py[p];
-            //  犬猫はゲートで捕まえるので狙わない。
-            if ((field.pt[p]!=3 && field.pt[p]!=4) &&
-                D[x][y]<dmin)
+            int up_down;
+            if (i==0 && h%2==0 ||
+                i==1 && h%2!=0)
+                up_down = 0;
+            else
+                up_down = 1;
+
+            int dmin = oo;
+            for (int p=0; p<N; p++)
             {
-                dmin = D[x][y];
-                target = p;
+                int x = field.px[p];
+                int y = field.py[p];
+                //  犬猫はゲートで捕まえるので狙わない。
+                if ((field.pt[p]!=3 && field.pt[p]!=4) &&
+                    (up_down==0 && x<S/2 ||
+                     up_down==1 && x>=S/2) &&
+                    D[x][y]<dmin)
+                {
+                    dmin = D[x][y];
+                    target = p;
+                }
             }
         }
 
