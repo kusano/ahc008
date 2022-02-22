@@ -193,13 +193,21 @@ struct Field
     // (sx, sy)からの距離を求める
     void get_distances(int sx, int sy, vector<vector<int>> *D)
     {
+        get_distances(vector<int>{sx}, vector<int>{sy}, D);
+    }
+
+    void get_distances(vector<int> SX, vector<int> SY, vector<vector<int>> *D)
+    {
         for (int x=0; x<S; x++)
             for (int y=0; y<S; y++)
                 (*D)[x][y] = oo;
         Q.clear();
 
-        (*D)[sx][sy] = 0;
-        Q.push_back({sx, sy});
+        for (int i=0; i<(int)SX.size(); i++)
+        {
+            (*D)[SX[i]][SY[i]] = 0;
+            Q.push_back({SX[i], SY[i]});
+        }
         for (int q=0; q<(int)Q.size(); q++)
         {
             int x = Q[q].first;
@@ -555,6 +563,7 @@ public:
         int hy = field.hy[h];
 
         //  目標選択
+        /*
         //  偶数番目の人は上半分、奇数番目の人は下半分のペット。
         //  偶数番目の人は右上、奇数番目は右下に近いペットを優先する。
         //  上半分／下半分の全てのペットが捕獲済みなら、下半分／上半分に向かう。
@@ -597,89 +606,114 @@ public:
                 }
             }
         }
+        */
+
+        //  最も近いペット
+        int target = -1;
+
+        field.get_distances(hx, hy, &D);
+
+        int dmin = oo;
+        for (int p=0; p<N; p++)
+        {
+            int x = field.px[p];
+            int y = field.py[p];
+            //  犬猫はゲートで捕まえるので狙わない。
+            if ((field.pt[p]!=3 && field.pt[p]!=4) &&
+                D[x][y]<dmin)
+            {
+                dmin = D[x][y];
+                target = p;
+            }
+        }
 
         if (target==-1)
             return STAY;
 
+        field.get_distances(S/2, 0, &D);
+
         int px = field.px[target];
         int py = field.py[target];
+        int pd = D[px][py];
 
-        field.get_distances(px, py, &D);
-        int pd = D[hx][hy];
+        field.get_distances(px, py, &D2);
 
         vector<int> moves;
 
-        //  通行不可にする距離
-        int block_dist[5] = {3, 3, 3, 0, 0};
-        int bd = block_dist[field.pt[target]];
-
-        if (pd<=bd-2)
+        //  (SX/2, 0)から(px, py)の最短経路上で、(px, py)からの距離が2の位置を、
+        //  通行不可にできるならする。
+        for (int d=0; d<4; d++)
         {
-            //  離れる
-            for (int d=0; d<4; d++)
+            int tx = hx+dir_x[d];
+            int ty = hy+dir_y[d];
+            if (0<=tx && tx<S && 0<=ty && ty<S &&
+                D[tx][ty]==pd-2 &&
+                D2[tx][ty]==2 &&
+                field.can_block(tx, ty))
             {
-                int tx = hx+dir_x[d];
-                int ty = hy+dir_y[d];
-                if (0<=tx && tx<S && 0<=ty && ty<S &&
-                    D[tx][ty]==pd+1 &&
-                    field.F[tx][ty]==0)
-                    moves.push_back(d);
-            }
-        }
-        else if (pd==bd-1)
-            ;
-        else if (pd==bd)
-        {
-            //  通行不可にする
-            for (int d=0; d<4; d++)
-            {
-                int tx = hx+dir_x[d];
-                int ty = hy+dir_y[d];
-                if (0<=tx && tx<S && 0<=ty && ty<S &&
-                    D[tx][ty]==pd-1 &&
-                    field.can_block(tx, ty))
+                //  ゲート設置を邪魔しないか確認
+                bool ok = true;
+                if (S/2-4<=tx && tx<S/2+4 &&
+                    ty<current_gate*2+2)
+                    ok = false;
+                if (tx==S/2-1 || tx==S/2)
+                    ok = false;
+                if (tx==S/2-2 &&
+                    gate_num*2<=ty)
+                    if (states[4]==0 ||
+                        states[4]==1 && ty<=field.hy[4])
+                        ok = false;
+                if (ok)
                 {
-                    //  ゲート設置を邪魔しないか確認
+                    //  通行不可にしたことで人が閉じ込められるなら不可
+                    field.get_distances(S/2, 0, &D);
+                    field.F[tx][ty] = 1;
+                    field.get_distances(S/2, 0, &D2);
+                    field.F[tx][ty] = 0;
                     bool ok = true;
-                    if (S/2-4<=tx && tx<S/2+4 &&
-                        ty<current_gate*2+2)
-                        ok = false;
-                    if (tx==S/2-1 || tx==S/2)
-                        ok = false;
-                    if (tx==S/2-2 &&
-                        gate_num*2<=ty)
-                        if (states[4]==0 ||
-                            states[4]==1 && ty<=field.hy[4])
+                    for (int h=0; h<M && ok; h++)
+                        if (D[field.hx[h]][field.hy[h]]<oo &&
+                            D2[field.hx[h]][field.hy[h]]==oo)
                             ok = false;
                     if (ok)
-                    {
-                        //  通行不可にしたことで人が閉じ込められるなら不可
-                        field.get_distances(S/2, 0, &D);
-                        field.F[tx][ty] = 1;
-                        field.get_distances(S/2, 0, &D2);
-                        field.F[tx][ty] = 0;
-                        bool ok = true;
-                        for (int h=0; h<M && ok; h++)
-                            if (D[field.hx[h]][field.hy[h]]<oo &&
-                                D2[field.hx[h]][field.hy[h]]==oo)
-                                ok = false;
-                        if (ok)
-                            moves.push_back(d+4);
-                    }
+                        moves.push_back(d+4);
                 }
             }
         }
-        else
+
+        if (moves.empty())
         {
-            // 近づく
-            for (int d=0; d<4; d++)
+            if (D[hx][hy]==pd-2 &&
+                D2[hx][hy]==2)
+                //  距離2のマスにいるなら移動しない
+                ;
+            else
             {
-                int tx = hx+dir_x[d];
-                int ty = hy+dir_y[d];
-                if (0<=tx && tx<S && 0<=ty && ty<S &&
-                    D[tx][ty]==pd-1 &&
-                    field.F[tx][ty]==0)
-                    moves.push_back(d);
+                //  距離3のマスに近づく
+                vector<int> SX, SY;
+                for (int x=0; x<S; x++)
+                    for (int y=0; y<S; y++)
+                        if (D[x][y]==pd-3 &&
+                            D2[x][y]==3)
+                        {
+                            SX.push_back(x);
+                            SY.push_back(y);
+                        }
+
+                if (!SX.empty())
+                {
+                    field.get_distances(SX, SY, &D);
+
+                    for (int d=0; d<4; d++)
+                    {
+                        int tx = hx+dir_x[d];
+                        int ty = hy+dir_y[d];
+                        if (0<=tx && tx<S && 0<=ty && ty<S &&
+                            D[tx][ty]==D[hx][hy]-1 &&
+                            field.F[tx][ty]==0)
+                            moves.push_back(d);
+                    }
+                }
             }
         }
 
