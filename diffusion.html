@@ -98,7 +98,6 @@ function update() {
     }
   }
 
-  canvas.innerHTML = "";
   m = 0;
   for (var x=0; x<30; x++) {
     for (var y=0; y<30; y++) {
@@ -107,15 +106,17 @@ function update() {
   }
   if (m==0)
     m = 1;
+  var s = "";
   for (var x=0; x<30; x++) {
     for (var y=0; y<30; y++) {
       var v = Math.min(255, Math.max(0, (1-S[x][y]/m)*255|0));
-      canvas.innerHTML += `
+      s += `
         <div class="cell" style="top: ${x*24}px; left: ${y*24}px; background-color: rgb(255, ${v}, ${v})" onclick="click_(${x}, ${y})">
           ${["🐮", "🐷", "🐰", "🐶", "🐱", "🚪", "　"][field[x][y]]}
         </div>`;
     }
   }
+  canvas.innerHTML = s;
 }
 update();
     </script>
