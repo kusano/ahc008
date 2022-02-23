@@ -666,15 +666,15 @@ public:
 
         vector<int> moves;
 
-        //  (SX/2, 0)から(px, py)の最短経路上で、(px, py)からの距離が2の位置を、
+        //  (SX/2, 0)から(px, py)の最短経路上で、(px, py)からの距離が2か3の位置を、
         //  通行不可にできるならする。
         for (int d=0; d<4; d++)
         {
             int tx = hx+dir_x[d];
             int ty = hy+dir_y[d];
             if (0<=tx && tx<S && 0<=ty && ty<S &&
-                D[tx][ty]==pd-2 &&
-                D2[tx][ty]==2 &&
+                (D[tx][ty]==pd-2 && D2[tx][ty]==2 ||
+                 (field.pt[target]==0 || field.pt[target]==2) && D[tx][ty]==pd-3 && D2[tx][ty]==3) &&
                 field.can_block(tx, ty))
             {
                 //  ゲート設置を邪魔しないか確認
