@@ -684,7 +684,9 @@ public:
                     ok = false;
                 if (tx==S/2-1 || tx==S/2)
                     ok = false;
-                if (tx==S/2-2 &&
+                // 先に設置してしまうと、ゲートによって隔離される可能性があるので、
+                // 下側もゲート設置完了までは置かない。
+                if ((tx==S/2-2 || tx==S/2+1) &&
                     gate_num*2<=ty)
                     if (states[4]==0 ||
                         states[4]==1 && ty<=field.hy[4])
