@@ -707,6 +707,9 @@ public:
             }
         }
 
+        field.get_distances(S/2, 0, &D);
+        field.get_distances(px, py, &D2);
+
         if (moves.empty())
         {
             if (D[hx][hy]==pd-2 &&
