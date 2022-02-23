@@ -228,6 +228,18 @@ struct Field
         }
     }
 
+    //  (sx, sy)から到達可能なマス数を返す
+    int get_area(int sx, int sy)
+    {
+        get_distances(sx, sy, &D);
+        int c = 0;
+        for (int x=0; x<S; x++)
+            for (int y=0; y<S; y++)
+                if (D[x][y]<oo)
+                    c++;
+        return c;
+    }
+
     long long score()
     {
         for (int y=0; y<S; y++)
@@ -666,15 +678,12 @@ public:
 
         vector<int> moves;
 
-        //  (SX/2, 0)から(px, py)の最短経路上で、(px, py)からの距離が2か3の位置を、
-        //  通行不可にできるならする。
+        //  通行不可にする動き
         for (int d=0; d<4; d++)
         {
             int tx = hx+dir_x[d];
             int ty = hy+dir_y[d];
             if (0<=tx && tx<S && 0<=ty && ty<S &&
-                (D1[tx][ty]==pd-2 && D2[tx][ty]==2 ||
-                 (field.pt[target]==0 || field.pt[target]==2) && D1[tx][ty]==pd-3 && D2[tx][ty]==3) &&
                 field.can_block(tx, ty))
             {
                 //  ゲート設置を邪魔しないか確認
@@ -691,20 +700,48 @@ public:
                     if (states[4]==0 ||
                         states[4]==1 && ty<=field.hy[4])
                         ok = false;
-                if (ok)
-                {
-                    //  通行不可にしたことで人が閉じ込められるなら不可
-                    field.F[tx][ty] = 1;
-                    field.get_distances(S/2, 0, &D3);
-                    field.F[tx][ty] = 0;
-                    bool ok = true;
-                    for (int h=0; h<M && ok; h++)
-                        if (D1[field.hx[h]][field.hy[h]]<oo &&
-                            D3[field.hx[h]][field.hy[h]]==oo)
-                            ok = false;
-                    if (ok)
-                        moves.push_back(d+4);
-                }
+                if (!ok)
+                    continue;
+
+                field.F[tx][ty] = 1;
+                field.get_distances(S/2, 0, &D3);
+                field.F[tx][ty] = 0;
+
+                //  通行不可にしたことで人が閉じ込められるなら不可
+                for (int h=0; h<M && ok; h++)
+                    if (D1[field.hx[h]][field.hy[h]]<oo &&
+                        D3[field.hx[h]][field.hy[h]]==oo)
+                        ok = false;
+                if (!ok)
+                    continue;
+
+                //  通行不可にすることで、新たにペットを閉じ込めることができ、
+                //  ペット1匹あたりのマス数が30以下なら通行不可にする。
+                //  複数の方向で条件を満たすかもしれないので、即座に返すべきではないかも。
+                int n = 0;
+                int a = 0;
+                for (int p=0; p<N; p++)
+                    if (D1[field.px[p]][field.py[p]]<oo &&
+                        D3[field.px[p]][field.py[p]]==oo)
+                    {
+                        n++;
+                        field.F[tx][ty] = 1;
+                        a += field.get_area(field.px[p], field.py[p]);
+                        field.F[tx][ty] = 0;
+                    }
+                if (n>0 &&
+                    a/n <= 30)
+                    return d+4;
+                //  ペットを閉じ込めてマス数が上記の条件より大きい場合は不可。
+                if (n>0 &&
+                    a/n > 30)
+                    continue;
+
+                //  (SX/2, 0)から(px, py)の最短経路上で、(px, py)からの距離が2、
+                //  もしくは、距離が3でペットの移動回数が奇数なら通行不可にする。
+                if (D1[tx][ty]==pd-2 && D2[tx][ty]==2 ||
+                    D1[tx][ty]==pd-3 && D2[tx][ty]==3 && (field.pt[target]==0 || field.pt[target]==2))
+                    moves.push_back(d+4);
             }
         }
 
