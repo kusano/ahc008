@@ -308,6 +308,7 @@ class AI
     //  上半分／下半分で狙うペット
     int target_up = -1;
     int target_down = -1;
+    vector<int> targets;
 
 public:
     AI(Field field):
@@ -379,6 +380,8 @@ public:
             states[h] = STATE_CHASE;
 
         D1 = D2 = D3 = D4 = vector<vector<int>>(S, vector<int>(S));
+
+        targets = vector<int>(M, -1);
     }
 
     //  全員分の動きを返す
@@ -634,6 +637,7 @@ public:
         }
         */
 
+        /*
         //  上半分／下半分で最も近いペット
         int target = -1;
 
@@ -661,6 +665,59 @@ public:
                 {
                     dmin = D1[x][y];
                     target = p;
+                }
+            }
+        }
+        */
+
+        //  中央からの距離が遠いペット
+        //  人ごとに違うペットを狙う。
+        int &target = targets[h];
+
+        field.get_distances(S/2, 0, &D1);
+
+        if (target!=-1)
+            if (D1[field.px[target]][field.py[target]]==oo)
+            target = -1;
+        if (target==-1)
+        {
+            for (int i=0; i<2 && target==-1; i++)
+            {
+                for (int j=0; j<2 && target==-1; j++)
+                {
+                    int up_down;
+                    if (i==0 && h%2==0 ||
+                        i==1 && h%2!=0)
+                        up_down = 0;
+                    else
+                        up_down = 1;
+
+                    int dmax = 0;
+                    for (int p=0; p<N; p++)
+                    {
+                        if (j==0)
+                        {
+                            bool ok = true;
+                            for (int t: targets)
+                                if (t==p)
+                                    ok = false;
+                            if (!ok)
+                                continue;
+                        }
+
+                        int x = field.px[p];
+                        int y = field.py[p];
+                        //  犬猫はゲートで捕まえるので狙わない。
+                        if ((field.pt[p]!=3 && field.pt[p]!=4) &&
+                            (up_down==0 && x<S/2 ||
+                             up_down==1 && x>=S/2) &&
+                            D1[x][y]<oo &&
+                            D1[x][y]>dmax)
+                        {
+                            dmax = D1[x][y];
+                            target = p;
+                        }
+                    }
                 }
             }
         }
