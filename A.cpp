@@ -712,9 +712,10 @@ public:
 
         if (moves.empty())
         {
-            if (D[hx][hy]==pd-2 &&
+            if ((field.pt[target]==0 || field.pt[target]==2) &&
+                D[hx][hy]==pd-2 &&
                 D2[hx][hy]==2)
-                //  距離2のマスにいるなら移動しない
+                //  目標が奇数回移動で、距離2のマスにいるなら移動しない
                 ;
             else
             {
