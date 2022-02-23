@@ -292,7 +292,7 @@ class AI
     //  人iは実際には人P[i]
     vector<int> P;
     vector<int> states;
-    vector<vector<int>> D, D2;
+    vector<vector<int>> D1, D2, D3, D4;
     //  上半分／下半分で狙うペット
     int target_up = -1;
     int target_down = -1;
@@ -366,7 +366,7 @@ public:
         for (int h=5; h<M; h++)
             states[h] = STATE_CHASE;
 
-        D = D2 = vector<vector<int>>(S, vector<int>(S));
+        D1 = D2 = D3 = D4 = vector<vector<int>>(S, vector<int>(S));
     }
 
     //  全員分の動きを返す
@@ -583,10 +583,10 @@ public:
         //  上半分／下半分の全てのペットが捕獲済みなら、下半分／上半分に向かう。
         int &target = h%2==0 ? target_up : target_down;
 
-        field.get_distances(S/2, 0, &D);
+        field.get_distances(S/2, 0, &D1);
 
         if (target!=-1 &&
-            D[field.px[target]][field.py[target]]==oo)
+            D1[field.px[target]][field.py[target]]==oo)
             target = -1;
         if (target==-1)
         {
@@ -606,7 +606,7 @@ public:
                     int y = field.py[p];
                     //  犬猫はゲートで捕まえるので狙わない。
                     if ((field.pt[p]!=3 && field.pt[p]!=4) &&
-                        D[x][y]<oo &&
+                        D1[x][y]<oo &&
                         (up_down==0 && x<S/2 ||
                          up_down==1 && x>=S/2))
                     {
@@ -625,7 +625,7 @@ public:
         //  上半分／下半分で最も近いペット
         int target = -1;
 
-        field.get_distances(hx, hy, &D);
+        field.get_distances(hx, hy, &D1);
 
         for (int i=0; i<2 && target==-1; i++)
         {
@@ -645,9 +645,9 @@ public:
                 if ((field.pt[p]!=3 && field.pt[p]!=4) &&
                     (up_down==0 && x<S/2 ||
                      up_down==1 && x>=S/2) &&
-                    D[x][y]<dmin)
+                    D1[x][y]<dmin)
                 {
-                    dmin = D[x][y];
+                    dmin = D1[x][y];
                     target = p;
                 }
             }
@@ -656,11 +656,11 @@ public:
         if (target==-1)
             return STAY;
 
-        field.get_distances(S/2, 0, &D);
+        field.get_distances(S/2, 0, &D1);
 
         int px = field.px[target];
         int py = field.py[target];
-        int pd = D[px][py];
+        int pd = D1[px][py];
 
         field.get_distances(px, py, &D2);
 
@@ -673,8 +673,8 @@ public:
             int tx = hx+dir_x[d];
             int ty = hy+dir_y[d];
             if (0<=tx && tx<S && 0<=ty && ty<S &&
-                (D[tx][ty]==pd-2 && D2[tx][ty]==2 ||
-                 (field.pt[target]==0 || field.pt[target]==2) && D[tx][ty]==pd-3 && D2[tx][ty]==3) &&
+                (D1[tx][ty]==pd-2 && D2[tx][ty]==2 ||
+                 (field.pt[target]==0 || field.pt[target]==2) && D1[tx][ty]==pd-3 && D2[tx][ty]==3) &&
                 field.can_block(tx, ty))
             {
                 //  ゲート設置を邪魔しないか確認
@@ -694,14 +694,13 @@ public:
                 if (ok)
                 {
                     //  通行不可にしたことで人が閉じ込められるなら不可
-                    field.get_distances(S/2, 0, &D);
                     field.F[tx][ty] = 1;
-                    field.get_distances(S/2, 0, &D2);
+                    field.get_distances(S/2, 0, &D3);
                     field.F[tx][ty] = 0;
                     bool ok = true;
                     for (int h=0; h<M && ok; h++)
-                        if (D[field.hx[h]][field.hy[h]]<oo &&
-                            D2[field.hx[h]][field.hy[h]]==oo)
+                        if (D1[field.hx[h]][field.hy[h]]<oo &&
+                            D3[field.hx[h]][field.hy[h]]==oo)
                             ok = false;
                     if (ok)
                         moves.push_back(d+4);
@@ -709,13 +708,10 @@ public:
             }
         }
 
-        field.get_distances(S/2, 0, &D);
-        field.get_distances(px, py, &D2);
-
         if (moves.empty())
         {
             if ((field.pt[target]==0 || field.pt[target]==2) &&
-                D[hx][hy]==pd-2 &&
+                D1[hx][hy]==pd-2 &&
                 D2[hx][hy]==2)
                 //  目標が奇数回移動で、距離2のマスにいるなら移動しない
                 ;
@@ -725,7 +721,7 @@ public:
                 vector<int> SX, SY;
                 for (int x=0; x<S; x++)
                     for (int y=0; y<S; y++)
-                        if (D[x][y]==pd-3 &&
+                        if (D1[x][y]==pd-3 &&
                             D2[x][y]==3)
                         {
                             SX.push_back(x);
@@ -734,14 +730,14 @@ public:
 
                 if (!SX.empty())
                 {
-                    field.get_distances(SX, SY, &D);
+                    field.get_distances(SX, SY, &D3);
 
                     for (int d=0; d<4; d++)
                     {
                         int tx = hx+dir_x[d];
                         int ty = hy+dir_y[d];
                         if (0<=tx && tx<S && 0<=ty && ty<S &&
-                            D[tx][ty]==D[hx][hy]-1 &&
+                            D3[tx][ty]==D3[hx][hy]-1 &&
                             field.F[tx][ty]==0)
                             moves.push_back(d);
                     }
