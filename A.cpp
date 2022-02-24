@@ -28,6 +28,12 @@ const int BLOCK_R = 7;
 const int STAY = 8;
 const string move_str = "UDLRudlr.";
 
+const int TYPE_COW = 0;
+const int TYPE_PIG = 1;
+const int TYPE_RABBIT = 2;
+const int TYPE_DOG = 3;
+const int TYPE_CAT = 4;
+
 const int dir_x[] = {-1, 1, 0, 0};
 const int dir_y[] = {0, 0, -1, 1};
 
@@ -316,7 +322,8 @@ public:
     {
         gate_num = 1;
         for (int i=0; i<N; i++)
-            if (field.pt[i]==3 || field.pt[i]==4)
+            if (field.pt[i]==TYPE_DOG ||
+                field.pt[i]==TYPE_CAT)
                 gate_num++;
         gate_num = min(gate_num, 14);
 
@@ -408,7 +415,8 @@ public:
             //  ゲートに入りうる犬猫がいるかを確認
             bool ok = false;
             for (int i=0; i<N; i++)
-                if (field.pt[i]==3 || field.pt[i]==4)
+                if (field.pt[i]==TYPE_DOG ||
+                    field.pt[i]==TYPE_CAT)
                     if (field.toward(field.px[i], field.py[i], S/2, current_gate*2)!=-1)
                         ok = true;
             if (!ok)
@@ -426,7 +434,8 @@ public:
                     //  現在のゲート内に犬猫がいるか
                     bool ok = false;
                     for (int i=0; i<N; i++)
-                        if (field.pt[i]==3 || field.pt[i]==4)
+                        if (field.pt[i]==TYPE_DOG ||
+                            field.pt[i]==TYPE_CAT)
                             if ((field.px[i]==S/2-1 || field.px[i]==S/2) &&
                                 field.py[i]==current_gate*2)
                                 ok = true;
@@ -620,7 +629,8 @@ public:
                     int x = field.px[p];
                     int y = field.py[p];
                     //  犬猫はゲートで捕まえるので狙わない。
-                    if ((field.pt[p]!=3 && field.pt[p]!=4) &&
+                    if ((field.pt[p]!=TYPE_DOG &&
+                         field.pt[p]!=TYPE_CAT) &&
                         D1[x][y]<oo &&
                         (up_down==0 && x<S/2 ||
                          up_down==1 && x>=S/2))
@@ -658,7 +668,8 @@ public:
                 int x = field.px[p];
                 int y = field.py[p];
                 //  犬猫はゲートで捕まえるので狙わない。
-                if ((field.pt[p]!=3 && field.pt[p]!=4) &&
+                if ((field.pt[p]!=TYPE_DOG &&
+                     field.pt[p]!=TYPE_CAT) &&
                     (up_down==0 && x<S/2 ||
                      up_down==1 && x>=S/2) &&
                     D1[x][y]<dmin)
@@ -683,6 +694,18 @@ public:
         {
             for (int i=0; i<2 && target==-1; i++)
             {
+                //  犬を誘導するため、捕まっていない犬がいるなら、もう半分にはいかない
+                if (i==2)
+                {
+                    bool ok = true;
+                    for (int p=0; p<N; p++)
+                        if (field.pt[p]==TYPE_DOG &&
+                            D1[field.px[p]][field.py[p]]<oo)
+                            ok = false;
+                    if (!ok)
+                        continue;
+                }
+
                 for (int j=0; j<2 && target==-1; j++)
                 {
                     int up_down;
@@ -695,6 +718,7 @@ public:
                     int dmax = 0;
                     for (int p=0; p<N; p++)
                     {
+                        //  まずは他の人と違うペットを狙う
                         if (j==0)
                         {
                             bool ok = true;
@@ -708,7 +732,8 @@ public:
                         int x = field.px[p];
                         int y = field.py[p];
                         //  犬猫はゲートで捕まえるので狙わない。
-                        if ((field.pt[p]!=3 && field.pt[p]!=4) &&
+                        if ((field.pt[p]!=TYPE_DOG &&
+                             field.pt[p]!=TYPE_CAT) &&
                             (up_down==0 && x<S/2 ||
                              up_down==1 && x>=S/2) &&
                             D1[x][y]<oo &&
@@ -723,7 +748,17 @@ public:
         }
 
         if (target==-1)
-            return STAY;
+        {
+            //  犬の誘導のため、ゲートを閉める人の待機場所に行く。
+            int m;
+            if (h%2==0)
+                m = field.toward(S/2-4, current_gate*2);
+            else
+                m = field.toward(S/2+3, current_gate*2);
+            if (m==-1)
+                m = STAY;
+            return m;
+        }
 
         field.get_distances(S/2, 0, &D1);
 
@@ -797,14 +832,14 @@ public:
                 //  (SX/2, 0)から(px, py)の最短経路上で、(px, py)からの距離が2、
                 //  もしくは、距離が3でペットの移動回数が奇数なら通行不可にする。
                 if (D1[tx][ty]==pd-2 && D2[tx][ty]==2 ||
-                    D1[tx][ty]==pd-3 && D2[tx][ty]==3 && (field.pt[target]==0 || field.pt[target]==2))
+                    D1[tx][ty]==pd-3 && D2[tx][ty]==3 && (field.pt[target]==TYPE_COW || field.pt[target]==TYPE_RABBIT))
                     moves.push_back(d+4);
             }
         }
 
         if (moves.empty())
         {
-            if ((field.pt[target]==0 || field.pt[target]==2) &&
+            if ((field.pt[target]==TYPE_COW || field.pt[target]==TYPE_RABBIT) &&
                 D1[hx][hy]==pd-2 &&
                 D2[hx][hy]==2)
                 //  目標が奇数回移動で、距離2のマスにいるなら移動しない
