@@ -318,6 +318,7 @@ class AI
     int target_up = -1;
     int target_down = -1;
     vector<int> targets;
+    vector<int> targets_up_down;
 
 public:
     AI(Field field):
@@ -392,6 +393,7 @@ public:
         D1 = D2 = D3 = D4 = vector<vector<int>>(S, vector<int>(S));
 
         targets = vector<int>(M, -1);
+        targets_up_down = vector<int>(M, -1);
     }
 
     //  全員分の動きを返す
@@ -691,10 +693,30 @@ public:
         field.get_distances(S/2, 0, &D1);
 
         if (target!=-1)
+        {
+            //  ペットが閉じ込められた。
             if (D1[field.px[target]][field.py[target]]==oo)
-            target = -1;
+                target = -1;
+
+            //  ペットが下半分／上半分に逃げた。
+            if (targets_up_down[h]==0 && field.px[target]>=S/2 ||
+                targets_up_down[h]==1 && field.px[target]<S/2)
+                target = -1;
+        }
+
         if (target==-1)
         {
+            //  残りが猫だけになったら、猫も追う。
+            bool cat_only = false;
+            for (int p=0; p<N; p++)
+                if (field.pt[p]==TYPE_CAT &&
+                    D1[field.px[p]][field.py[p]]<oo)
+                    cat_only = true;
+            for (int p=0; p<N; p++)
+                if (field.pt[p]!=TYPE_CAT &&
+                    D1[field.px[p]][field.py[p]]<oo)
+                    cat_only = false;
+
             for (int i=0; i<2 && target==-1; i++)
             {
                 //  犬を誘導するため、捕まっていない犬がいるなら、もう半分にはいかない
@@ -736,7 +758,7 @@ public:
                         int y = field.py[p];
                         //  犬猫はゲートで捕まえるので狙わない。
                         if ((field.pt[p]!=TYPE_DOG &&
-                             field.pt[p]!=TYPE_CAT) &&
+                             (cat_only || field.pt[p]!=TYPE_CAT)) &&
                             (up_down==0 && x<S/2 ||
                              up_down==1 && x>=S/2) &&
                             D1[x][y]<oo &&
@@ -744,6 +766,7 @@ public:
                         {
                             dmax = D1[x][y];
                             target = p;
+                            targets_up_down[h] = up_down;
                         }
                     }
                 }
