@@ -719,17 +719,17 @@ public:
 
             for (int i=0; i<2 && target==-1; i++)
             {
-                //  犬を誘導するため、捕まっていない犬がいるなら、もう半分にはいかない
-                if (i==1)
-                {
-                    bool ok = true;
-                    for (int p=0; p<N; p++)
-                        if (field.pt[p]==TYPE_DOG &&
-                            D1[field.px[p]][field.py[p]]<oo)
-                            ok = false;
-                    if (!ok)
-                        continue;
-                }
+                ////  犬を誘導するため、捕まっていない犬がいるなら、もう半分にはいかない
+                //if (i==1)
+                //{
+                //    bool ok = true;
+                //    for (int p=0; p<N; p++)
+                //        if (field.pt[p]==TYPE_DOG &&
+                //            D1[field.px[p]][field.py[p]]<oo)
+                //            ok = false;
+                //    if (!ok)
+                //        continue;
+                //}
 
                 for (int j=0; j<2 && target==-1; j++)
                 {
