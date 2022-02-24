@@ -164,6 +164,9 @@ struct Field
         if (sx==gx && sy==gy)
             return STAY;
 
+        if (F[gx][gy]!=0)
+            return -1;
+
         get_distances(gx, gy, &D);
 
         if (D[sx][sy]==oo)
@@ -749,12 +752,16 @@ public:
 
         if (target==-1)
         {
-            //  犬の誘導のため、ゲートを閉める人の待機場所に行く。
-            int m;
-            if (h%2==0)
-                m = field.toward(S/2-4, current_gate*2);
-            else
-                m = field.toward(S/2+3, current_gate*2);
+            //  犬の誘導のため、ゲートを閉める人の待機場所近くに行く。
+            //  犬が多いとゲートが詰まるので、待機場所の少し右。
+            int m = -1;
+            for (int y=min(S-1, current_gate*2+6); y>=current_gate*2 && m==-1; y--)
+            {
+                if (h%2==0)
+                    m = field.toward(S/2-4, y);
+                else
+                    m = field.toward(S/2+3, y);
+            }
             if (m==-1)
                 m = STAY;
             return m;
