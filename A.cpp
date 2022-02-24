@@ -720,7 +720,7 @@ public:
             for (int i=0; i<2 && target==-1; i++)
             {
                 //  犬を誘導するため、捕まっていない犬がいるなら、もう半分にはいかない
-                if (i==2)
+                if (i==1)
                 {
                     bool ok = true;
                     for (int p=0; p<N; p++)
