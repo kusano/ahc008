@@ -300,7 +300,7 @@ struct Field
     }
 };
 
-class AI
+struct AI
 {
     static const int STATE_PREPARE = 0;     //  ゲート設置の開始位置に向かう
     static const int STATE_GATE    = 1;     //  ゲート設置
@@ -320,7 +320,6 @@ class AI
     vector<int> targets;
     vector<int> targets_up_down;
 
-public:
     AI(Field field):
         N(field.N), M(field.M)
     {
@@ -1008,6 +1007,7 @@ int main()
         }
     fprintf(stderr, "Uncaptured pets:  %2d (%2d, %2d, %2d, %2d, %2d)\n",
         s, UPC[0], UPC[1], UPC[2], UPC[3], UPC[4]);
+    fprintf(stderr, "Current gate: %d\n", ai.current_gate);
     long long score = field.score();
     fprintf(stderr, "Score: %7.4f %%\n", score*1e-8*100);
 }
