@@ -34,64 +34,55 @@ const int TYPE_RABBIT = 2;
 const int TYPE_DOG = 3;
 const int TYPE_CAT = 4;
 
-const int dir_x[] = {-1, 1, 0, 0};
-const int dir_y[] = {0, 0, -1, 1};
+const int dir[] = {-S, S, -1, 1};
 
 const int oo = 9999;
 
 struct Field
 {
     int N, M;
-    vector<int> px, py, pt;
-    vector<int> hx, hy;
-    vector<int> hx_old, hy_old;
+    vector<int> pp, pt;
+    vector<int> hp;
+    vector<int> hp_old;
 
     int turn = 0;
     int turn_sub = 0;
     //  通行不可
-    vector<vector<int>> F;
+    vector<int> F;
     //  人の数
-    vector<vector<int>> H;
+    vector<int> H;
     //  ペットの数
-    vector<vector<int>> P;
+    vector<int> P;
     //  距離計算に使用
-    vector<vector<int>> D;
-    vector<pair<int, int>> Q;
+    vector<int> D;
+    vector<int> Q;
 
-    Field(vector<int> px, vector<int> py, vector<int> pt, vector<int> hx, vector<int> hy)
-        : N(int(px.size()))
-        , M(int(hx.size()))
-        , px(px)
-        , py(py)
+    Field(vector<int> pp, vector<int> pt, vector<int> hp)
+        : N(int(pp.size()))
+        , M(int(hp.size()))
+        , pp(pp)
         , pt(pt)
-        , hx(hx)
-        , hy(hy)
+        , hp(hp)
     {
-        hx_old.resize(M);
-        hy_old.resize(M);
-        F = H = P = D = vector<vector<int>>(S, vector<int>(S));
+        hp_old.resize(M);
+        F = H = P = D = vector<int>(S*S);
 
-        for (int i=0; i<M; i++)
-            H[hx[i]][hy[i]]++;
-        for (int i=0; i<N; i++)
-            P[px[i]][py[i]]++;
+        for (int h=0; h<M; h++)
+            H[hp[h]]++;
+        for (int p=0; p<N; p++)
+            P[pp[p]]++;
     }
 
     //  i番目の人を操作しようとしたとき、P[i]番目の人を操作するようにする。
     void permutate(vector<int> P)
     {
-        vector<int> tmp_hx = hx;
-        vector<int> tmp_hy = hy;
-        vector<int> tmp_hx_old = hx_old;
-        vector<int> tmp_hy_old = hy_old;
+        vector<int> tmp_hp = hp;
+        vector<int> tmp_hp_old = hp_old;
         for (int i=0; i<M; i++)
-            for (int j=0; j<M; j++)
-            {
-                hx[i] = tmp_hx[P[i]];
-                hy[i] = tmp_hy[P[i]];
-                hx_old[i] = tmp_hx_old[P[i]];
-                hy_old[i] = tmp_hy_old[P[i]];
-            }
+        {
+            hp[i] = tmp_hp[P[i]];
+            hp_old[i] = tmp_hp_old[P[i]];
+        }
     }
 
     void move(vector<int> move)
@@ -100,26 +91,23 @@ struct Field
         {
             //  人
             int h = turn_sub;
-            hx_old[h] = -1;
+            hp_old[h] = -1;
             int m = move[0];
             if (m<4)
             {
                 //  移動
                 int d = m;
                 //  元いた場所も通行不可にはできないので、Hはターン終了時に減らす。
-                hx_old[h] = hx[h];
-                hy_old[h] = hy[h];
-                hx[h] += dir_x[d];
-                hy[h] += dir_y[d];
-                H[hx[h]][hy[h]]++;
+                hp_old[h] = hp[h];
+                hp[h] += dir[d];
+                H[hp[h]]++;
             }
             else if (m<8)
             {
                 //  通行不可
                 int d = m-4;
-                int x = hx[h]+dir_x[d];
-                int y = hy[h]+dir_y[d];
-                F[x][y] = 1;
+                int p = hp[h]+dir[d];
+                F[p] = 1;
             }
         }
         else
@@ -129,10 +117,9 @@ struct Field
             for (int m: move)
             {
                 int d = m;
-                P[px[p]][py[p]]--;
-                px[p] += dir_x[d];
-                py[p] += dir_y[d];
-                P[px[p]][py[p]]++;
+                P[pp[p]]--;
+                pp[p] += dir[d];
+                P[pp[p]]++;
             }
         }
 
@@ -140,155 +127,157 @@ struct Field
         if (turn_sub>=N+M)
         {
             for (int i=0; i<M; i++)
-                if (hx_old[i]>=0)
-                    H[hx_old[i]][hy_old[i]]--;
+                if (hp_old[i]>=0)
+                    H[hp_old[i]]--;
 
             turn_sub = 0;
             turn++;
         }
     }
 
-    //  現在操作している人やペットが(x, y)に近づく動きを返す。
-    //  (x, y)にいるならSTAY、到達不可能なら-1
-    int toward(int x, int y)
+    //  現在操作している人やペットがposに近づく動きを返す。
+    //  posにいるならSTAY、到達不可能なら-1
+    int toward(int pos)
     {
         if (turn_sub<M)
-            return toward(hx[turn_sub], hy[turn_sub], x, y);
+            return toward(hp[turn_sub], pos);
         else
-            return toward(px[turn_sub-M], py[turn_sub-M], x, y);
+            return toward(pp[turn_sub-M], pos);
     }
 
-    //  (sx, sy)から(gx, gy)に向かう動きを返す。
-    int toward(int sx, int sy, int gx, int gy)
+    //  spからgpに向かう動きを返す。
+    int toward(int sp, int gp)
     {
-        if (sx==gx && sy==gy)
+        if (sp==gp)
             return STAY;
 
-        if (F[gx][gy]!=0)
+        if (F[gp]!=0)
             return -1;
 
-        get_distances(gx, gy, &D);
+        get_distances(gp, &D);
 
-        if (D[sx][sy]==oo)
+        if (D[sp]==oo)
             return -1;
 
         vector<int> moves;
         for (int d=0; d<4; d++)
-        {
-            int tx = sx+dir_x[d];
-            int ty = sy+dir_y[d];
-            if (0<=tx && tx<S && 0<=ty && ty<S &&
-                D[tx][ty]==D[sx][sy]-1)
-                moves.push_back(d);
-        }
+            if (can_move(sp, d))
+            {
+                int tp = sp+dir[d];
+                if (D[tp]==D[sp]-1)
+                    moves.push_back(d);
+            }
 
         return moves[xor64()%(int)moves.size()];
     }
 
-    bool can_block(int x, int y)
+    //  posから動きdができるかを返す
+    bool can_move(int pos, int d)
     {
-        if (F[x][y]!=0 || H[x][y]!=0 || P[x][y]!=0)
+        switch (d)
+        {
+        case MOVE_U: return pos/S>=1;
+        case MOVE_D: return pos/S<S-1;
+        case MOVE_L: return pos%S>=1;
+        case MOVE_R: return pos%S<S-1;
+        }
+        return false;
+    }
+
+    bool can_block(int pos)
+    {
+        if (F[pos]!=0 || H[pos]!=0 || P[pos]!=0)
             return false;
         for (int d=0; d<4; d++)
-        {
-            int tx = x+dir_x[d];
-            int ty = y+dir_y[d];
-            if (0<=tx && tx<S && 0<=ty && ty<S &&
-                P[tx][ty]>0)
-                return false;
-        }
+            if (can_move(pos, d))
+            {
+                int t = pos+dir[d];
+                if (P[t]>0)
+                    return false;
+            }
         return true;
     }
 
-    // (sx, sy)からの距離を求める
-    void get_distances(int sx, int sy, vector<vector<int>> *D)
+    // spからの距離を求める
+    void get_distances(int sp, vector<int> *D)
     {
-        get_distances(vector<int>{sx}, vector<int>{sy}, D);
+        get_distances(vector<int>{sp}, D);
     }
 
-    void get_distances(vector<int> SX, vector<int> SY, vector<vector<int>> *D)
+    void get_distances(vector<int> SP, vector<int> *D)
     {
-        for (int x=0; x<S; x++)
-            for (int y=0; y<S; y++)
-                (*D)[x][y] = oo;
+        for (int &d: *D)
+            d = oo;
         Q.clear();
 
-        for (int i=0; i<(int)SX.size(); i++)
+        for (int p: SP)
         {
-            (*D)[SX[i]][SY[i]] = 0;
-            Q.push_back({SX[i], SY[i]});
+            (*D)[p] = 0;
+            Q.push_back(p);
         }
+
         for (int q=0; q<(int)Q.size(); q++)
         {
-            int x = Q[q].first;
-            int y = Q[q].second;
+            int p = Q[q];
             for (int d=0; d<4; d++)
-            {
-                int tx = x+dir_x[d];
-                int ty = y+dir_y[d];
-                if (0<=tx && tx<S && 0<=ty && ty<S &&
-                    F[tx][ty]==0 &&
-                    (*D)[tx][ty]==oo)
+                if (can_move(p, d))
                 {
-                    (*D)[tx][ty] = (*D)[x][y]+1;
-                    Q.push_back({tx, ty});
+                    int tp = p+dir[d];
+                    if (F[tp]==0 && (*D)[tp]==oo)
+                    {
+                        (*D)[tp] = (*D)[p]+1;
+                        Q.push_back(tp);
+                    }
                 }
-            }
         }
     }
 
-    //  (sx, sy)から到達可能なマス数を返す
-    int get_area(int sx, int sy)
+    //  spから到達可能なマス数を返す
+    int get_area(int sp)
     {
-        get_distances(sx, sy, &D);
+        get_distances(sp, &D);
         int c = 0;
-        for (int x=0; x<S; x++)
-            for (int y=0; y<S; y++)
-                if (D[x][y]<oo)
-                    c++;
+        for (int d: D)
+            if (d<oo)
+                c++;
         return c;
     }
 
     long long score()
     {
-        for (int y=0; y<S; y++)
-            for (int x=0; x<S; x++)
-                D[x][y] = 0;
+        for (int &d: D)
+            d = 0;
 
         long long score = 0;
         for (int i=0; i<M; i++)
         {
-            int ox = hx[i];
-            int oy = hy[i];
-            if (D[ox][oy]==0)
+            int op = hp[i];
+            if (D[op]==0)
             {
                 int cn = 0;
                 int hn = 0;
                 int pn = 0;
 
                 Q.clear();
-                Q.push_back({ox, oy});
+                Q.push_back(op);
                 for (int q=0; q<(int)Q.size(); q++)
                 {
-                    int x = Q[q].first;
-                    int y = Q[q].second;
+                    int p = Q[q];
 
-                    if (D[x][y]==1)
+                    if (D[p]==1)
                         continue;
-                    D[x][y] = 1;
+                    D[p] = 1;
                     cn++;
-                    hn += H[x][y];
-                    pn += P[x][y];
+                    hn += H[p];
+                    pn += P[p];
 
                     for (int d=0; d<4; d++)
-                    {
-                        int tx = x+dir_x[d];
-                        int ty = y+dir_y[d];
-                        if (0<=tx && tx<S && 0<=ty && ty<S &&
-                            F[tx][ty]==0 &&
-                            D[tx][ty]==0)
-                            Q.push_back({tx, ty});
-                    }
+                        if (can_move(p, d))
+                        {
+                            int tp = p+dir[d];
+                            if (F[tp]==0 && D[tp]==0)
+                                Q.push_back(tp);
+                        }
                 }
 
                 score += (long long)(cn*hn)<<(N-pn);
@@ -313,7 +302,7 @@ struct AI
     //  人iは実際には人P[i]
     vector<int> P;
     vector<int> states;
-    vector<vector<int>> D1, D2, D3, D4;
+    vector<int> D1, D2, D3, D4;
     //  上半分／下半分で狙うペット
     int target_up = -1;
     int target_down = -1;
@@ -334,9 +323,8 @@ struct AI
 
         //  人を割り当てる。
         //  ゲートができるまで機能しないので、途中から離れる人を優先する。
-        vector<int> idx{4,     2,     3,     0,     1    };
-        vector<int> gx {S/2-1, S/2-2, S/2+1, S/2-1, S/2  };
-        vector<int> gy {S-2,   2,     2,     2,     2    };
+        vector<int> idx{4,               2,           3,           0,           1          };
+        vector<int> gp {(S/2-1)*S+(S-2), (S/2-2)*S+2, (S/2+1)*S+2, (S/2-1)*S+2, (S/2  )*S+2};
         vector<bool> U(M);
         P.resize(5);
         for (int i=0; i<5; i++)
@@ -346,7 +334,7 @@ struct AI
             for (int j=0; j<M; j++)
                 if (!U[j])
                 {
-                    int d = abs(field.hx[j]-gx[i])+abs(field.hy[j]-gy[i]);
+                    int d = abs(field.hp[j]/S-gp[i]/S)+abs(field.hp[j]%S-gp[i]%S);
                     if (d<dmin)
                     {
                         dmin = d;
@@ -360,7 +348,7 @@ struct AI
         vector<pair<int, int>> V;
         for (int i=0; i<M; i++)
             if (!U[i])
-                V.push_back({field.hx[i], i});
+                V.push_back({field.hp[i]/S, i});
         sort(V.begin(), V.end());
         while (!V.empty())
         {
@@ -389,7 +377,7 @@ struct AI
         for (int h=5; h<M; h++)
             states[h] = STATE_CHASE;
 
-        D1 = D2 = D3 = D4 = vector<vector<int>>(S, vector<int>(S));
+        D1 = D2 = D3 = D4 = vector<int>(S*S);
 
         targets = vector<int>(M, -1);
         targets_up_down = vector<int>(M, -1);
@@ -403,10 +391,10 @@ struct AI
         //  ゲートに捕獲するか
         bool capture = false;
         if (current_gate==0 &&
-            field.F[S/2-2][1]==1 &&
-            field.F[S/2-1][1]==1 &&
-            field.F[S/2  ][1]==1 &&
-            field.F[S/2+1][1]==1)
+            field.F[(S/2-2)*S+1]==1 &&
+            field.F[(S/2-1)*S+1]==1 &&
+            field.F[(S/2  )*S+1]==1 &&
+            field.F[(S/2+1)*S+1]==1)
         {
             states[0] = STATE_CHASE;
             states[1] = STATE_CHASE;
@@ -421,7 +409,7 @@ struct AI
             for (int i=0; i<N; i++)
                 if (field.pt[i]==TYPE_DOG ||
                     field.pt[i]==TYPE_CAT)
-                    if (field.toward(field.px[i], field.py[i], S/2, current_gate*2)!=-1)
+                    if (field.toward(field.pp[i], S/2*S+current_gate*2)!=-1)
                         ok = true;
             if (!ok)
             {
@@ -430,26 +418,26 @@ struct AI
                 current_gate = 0;
             }
             else
-                if (field.hx[0]==S/2-4 && field.hy[0]==current_gate*2 &&
-                    field.hx[1]==S/2+3 && field.hy[1]==current_gate*2 &&
-                    field.can_block(S/2-3, current_gate*2) &&
-                    field.can_block(S/2+2, current_gate*2))
+                if (field.hp[0]==(S/2-4)*S+current_gate*2 &&
+                    field.hp[1]==(S/2+3)*S+current_gate*2 &&
+                    field.can_block((S/2-3)*S+current_gate*2) &&
+                    field.can_block((S/2+2)*S+current_gate*2))
                 {
                     //  現在のゲート内に犬猫がいるか
                     bool ok = false;
                     for (int i=0; i<N; i++)
                         if (field.pt[i]==TYPE_DOG ||
                             field.pt[i]==TYPE_CAT)
-                            if ((field.px[i]==S/2-1 || field.px[i]==S/2) &&
-                                field.py[i]==current_gate*2)
+                            if (field.pp[i]==(S/2-1)*S+current_gate*2 ||
+                                field.pp[i]==(S/2  )*S+current_gate*2)
                                 ok = true;
                     if (ok)
                     {
                         //  現在のゲート内に人がいないか
                         bool ok = true;
                         for (int i=0; i<M; i++)
-                            if (field.hy[i]==current_gate*2 &&
-                                S/2-2<=field.hx[i] && field.hx[i]<S/2+2)
+                            if (field.hp[i]%S==current_gate*2 &&
+                                S/2-2<=field.hp[i]/S && field.hp[i]/S<S/2+2)
                                 ok = false;
                         if (ok)
                         {
@@ -469,11 +457,11 @@ struct AI
             {
                 switch (h)
                 {
-                case 0: move = field.toward(S/2-1, 2  ); break;
-                case 1: move = field.toward(S/2 ,  2  ); break;
-                case 2: move = field.toward(S/2-2, 2  ); break;
-                case 3: move = field.toward(S/2+1, 2  ); break;
-                case 4: move = field.toward(S/2-1, S-2); break;
+                case 0: move = field.toward((S/2-1)*S+2); break;
+                case 1: move = field.toward((S/2  )*S+2); break;
+                case 2: move = field.toward((S/2-2)*S+2); break;
+                case 3: move = field.toward((S/2+1)*S+2); break;
+                case 4: move = field.toward((S/2-1)*S+(S-2)); break;
                 }
                 if (move==STAY)
                     states[h] = STATE_GATE;
@@ -502,9 +490,9 @@ struct AI
                 else
                 {
                     if (h==0)
-                        move = field.toward(S/2-4, current_gate*2);
+                        move = field.toward((S/2-4)*S+current_gate*2);
                     else
-                        move = field.toward(S/2+3, current_gate*2);
+                        move = field.toward((S/2+3)*S+current_gate*2);
                     if (move==-1)
                         move = STAY;
                 }
@@ -539,33 +527,32 @@ struct AI
     int get_moves_gate(Field &field)
     {
         int h = field.turn_sub;
-        int x = field.hx[h];
-        int y = field.hy[h];
+        int p = field.hp[h];
 
         if (gate_num==1)
-            if (field.F[x][y-1]>0)
+            if (field.F[p-1]>0)
                 return -1;
             else
-                if (field.can_block(x, y-1))
+                if (field.can_block(p-1))
                     return BLOCK_L;
                 else
                     return STAY;
-        if (y==gate_num*2-2)
-            if (field.F[x][y-1]>0 && field.F[x][y+1]>0)
+        if (p%S==gate_num*2-2)
+            if (field.F[p-1]>0 && field.F[p+1]>0)
                 return -1;
             else
-                if (field.can_block(x, y-1))
+                if (field.can_block(p-1))
                     return BLOCK_L;
-                else if (field.can_block(x, y+1))
+                else if (field.can_block(p+1))
                     return BLOCK_R;
                 else
                     return STAY;
         else
-            if (y%2==0)
-                if (field.F[x][y-1]>0)
+            if (p%S%2==0)
+                if (field.F[p-1]>0)
                     return MOVE_R;
                 else
-                    if (field.can_block(x, y-1))
+                    if (field.can_block(p-1))
                         return BLOCK_L;
                     else
                         return STAY;
@@ -577,21 +564,20 @@ struct AI
     int get_moves_fence(Field &field)
     {
         int h = field.turn_sub;
-        int x = field.hx[h];
-        int y = field.hy[h];
+        int p = field.hp[h];
 
-        if (y%2!=0)
+        if (p%2%2!=0)
             return MOVE_L;
         else
-            if (field.F[x][y+1]>0 && field.F[x+1][y]>0)
-                if (y==gate_num*2)
+            if (field.F[p+1]>0 && field.F[p+S]>0)
+                if (p%S==gate_num*2)
                     return -1;
                 else
                     return MOVE_L;
             else
-                if (field.can_block(x, y+1))
+                if (field.can_block(p+1))
                     return BLOCK_R;
-                else if (field.can_block(x+1, y))
+                else if (field.can_block(p+S))
                     return BLOCK_D;
                 else
                     return STAY;
@@ -601,8 +587,7 @@ struct AI
     int get_moves_chase(Field &field)
     {
         int h = field.turn_sub;
-        int hx = field.hx[h];
-        int hy = field.hy[h];
+        int hp = field.hp[h];
 
         //  目標選択
         /*
@@ -611,10 +596,10 @@ struct AI
         //  上半分／下半分の全てのペットが捕獲済みなら、下半分／上半分に向かう。
         int &target = h%2==0 ? target_up : target_down;
 
-        field.get_distances(S/2, 0, &D1);
+        field.get_distances(S/2*S+0, &D1);
 
         if (target!=-1 &&
-            D1[field.px[target]][field.py[target]]==oo)
+            D1[field.pp[target]]==oo)
             target = -1;
         if (target==-1)
         {
@@ -630,16 +615,15 @@ struct AI
                 int dmin = oo;
                 for (int p=0; p<N; p++)
                 {
-                    int x = field.px[p];
-                    int y = field.py[p];
+                    int pp = field.pp[p];
                     //  犬猫はゲートで捕まえるので狙わない。
                     if ((field.pt[p]!=TYPE_DOG &&
                          field.pt[p]!=TYPE_CAT) &&
-                        D1[x][y]<oo &&
-                        (up_down==0 && x<S/2 ||
-                         up_down==1 && x>=S/2))
+                        D1[pp]<oo &&
+                        (up_down==0 && pp/S<S/2 ||
+                         up_down==1 && pp/S>=S/2))
                     {
-                        int d = abs(x-(S-1)*up_down)+abs(y-(S-1));
+                        int d = abs(pp/S-(S-1)*up_down)+abs(pp%S-(S-1));
                         if (d<dmin)
                         {
                             dmin = d;
@@ -655,7 +639,7 @@ struct AI
         //  上半分／下半分で最も近いペット
         int target = -1;
 
-        field.get_distances(hx, hy, &D1);
+        field.get_distances(hp, &D1);
 
         for (int i=0; i<2 && target==-1; i++)
         {
@@ -669,16 +653,15 @@ struct AI
             int dmin = oo;
             for (int p=0; p<N; p++)
             {
-                int x = field.px[p];
-                int y = field.py[p];
+                int pp = field.pp[p];
                 //  犬猫はゲートで捕まえるので狙わない。
                 if ((field.pt[p]!=TYPE_DOG &&
                      field.pt[p]!=TYPE_CAT) &&
-                    (up_down==0 && x<S/2 ||
-                     up_down==1 && x>=S/2) &&
-                    D1[x][y]<dmin)
+                    (up_down==0 && pp/S<S/2 ||
+                     up_down==1 && pp/S>=S/2) &&
+                    D1[pp]<dmin)
                 {
-                    dmin = D1[x][y];
+                    dmin = D1[pp];
                     target = p;
                 }
             }
@@ -689,17 +672,17 @@ struct AI
         //  人ごとに違うペットを狙う。
         int &target = targets[h];
 
-        field.get_distances(S/2, 0, &D1);
+        field.get_distances(S/2*S+0, &D1);
 
         if (target!=-1)
         {
             //  ペットが閉じ込められた。
-            if (D1[field.px[target]][field.py[target]]==oo)
+            if (D1[field.pp[target]]==oo)
                 target = -1;
 
             //  ペットが下半分／上半分に逃げた。
-            if (targets_up_down[h]==0 && field.px[target]>=S/2 ||
-                targets_up_down[h]==1 && field.px[target]<S/2)
+            if (targets_up_down[h]==0 && field.pp[target]/S>=S/2 ||
+                targets_up_down[h]==1 && field.pp[target]/S<S/2)
                 target = -1;
         }
 
@@ -709,11 +692,11 @@ struct AI
             bool cat_only = false;
             for (int p=0; p<N; p++)
                 if (field.pt[p]==TYPE_CAT &&
-                    D1[field.px[p]][field.py[p]]<oo)
+                    D1[field.pp[p]]<oo)
                     cat_only = true;
             for (int p=0; p<N; p++)
                 if (field.pt[p]!=TYPE_CAT &&
-                    D1[field.px[p]][field.py[p]]<oo)
+                    D1[field.pp[p]]<oo)
                     cat_only = false;
 
             for (int i=0; i<2 && target==-1; i++)
@@ -724,7 +707,7 @@ struct AI
                 //    bool ok = true;
                 //    for (int p=0; p<N; p++)
                 //        if (field.pt[p]==TYPE_DOG &&
-                //            D1[field.px[p]][field.py[p]]<oo)
+                //            D1[field.pp[p]]<oo)
                 //            ok = false;
                 //    if (!ok)
                 //        continue;
@@ -753,17 +736,16 @@ struct AI
                                 continue;
                         }
 
-                        int x = field.px[p];
-                        int y = field.py[p];
+                        int pp = field.pp[p];
                         //  犬猫はゲートで捕まえるので狙わない。
                         if ((field.pt[p]!=TYPE_DOG &&
                              (cat_only || field.pt[p]!=TYPE_CAT)) &&
-                            (up_down==0 && x<S/2 ||
-                             up_down==1 && x>=S/2) &&
-                            D1[x][y]<oo &&
-                            D1[x][y]>dmax)
+                            (up_down==0 && pp/S<S/2 ||
+                             up_down==1 && pp/S>=S/2) &&
+                            D1[pp]<oo &&
+                            D1[pp]>dmax)
                         {
-                            dmax = D1[x][y];
+                            dmax = D1[pp];
                             target = p;
                             targets_up_down[h] = up_down;
                         }
@@ -780,125 +762,118 @@ struct AI
             for (int y=min(S-1, current_gate*2+6); y>=current_gate*2 && m==-1; y--)
             {
                 if (h%2==0)
-                    m = field.toward(S/2-4, y);
+                    m = field.toward((S/2-4)*S+y);
                 else
-                    m = field.toward(S/2+3, y);
+                    m = field.toward((S/2+3)*S+y);
             }
             if (m==-1)
                 m = STAY;
             return m;
         }
 
-        field.get_distances(S/2, 0, &D1);
+        field.get_distances(S/2*S+0, &D1);
 
-        int px = field.px[target];
-        int py = field.py[target];
-        int pd = D1[px][py];
+        int pp = field.pp[target];
+        int pd = D1[pp];
 
-        field.get_distances(px, py, &D2);
+        field.get_distances(pp, &D2);
 
         vector<int> moves;
 
         //  通行不可にする動き
         for (int d=0; d<4; d++)
-        {
-            int tx = hx+dir_x[d];
-            int ty = hy+dir_y[d];
-            if (0<=tx && tx<S && 0<=ty && ty<S &&
-                field.can_block(tx, ty))
+            if (field.can_move(hp, d))
             {
-                //  ゲート設置を邪魔しないか確認
-                bool ok = true;
-                if (S/2-4<=tx && tx<S/2+4 &&
-                    ty<current_gate*2+2)
-                    ok = false;
-                if (tx==S/2-1 || tx==S/2)
-                    ok = false;
-                // 先に設置してしまうと、ゲートによって隔離される可能性があるので、
-                // 下側もゲート設置完了までは置かない。
-                if ((tx==S/2-2 || tx==S/2+1) &&
-                    gate_num*2<=ty)
-                    if (states[4]==0 ||
-                        states[4]==1 && ty<=field.hy[4])
+                int tp = hp+dir[d];
+                if (field.can_block(tp))
+                {
+                    //  ゲート設置を邪魔しないか確認
+                    bool ok = true;
+                    if (S/2-4<=tp/S && tp/S<S/2+4 &&
+                        tp%S<current_gate*2+2)
                         ok = false;
-                if (!ok)
-                    continue;
-
-                field.F[tx][ty] = 1;
-                field.get_distances(S/2, 0, &D3);
-                field.F[tx][ty] = 0;
-
-                //  通行不可にしたことで人が閉じ込められるなら不可
-                for (int h=0; h<M && ok; h++)
-                    if (D1[field.hx[h]][field.hy[h]]<oo &&
-                        D3[field.hx[h]][field.hy[h]]==oo)
+                    if (tp/S==S/2-1 || tp/S==S/2)
                         ok = false;
-                if (!ok)
-                    continue;
+                    // 先に設置してしまうと、ゲートによって隔離される可能性があるので、
+                    // 下側もゲート設置完了までは置かない。
+                    if ((tp/S==S/2-2 || tp/S==S/2+1) &&
+                        gate_num*2<=tp%S)
+                        if (states[4]==0 ||
+                            states[4]==1 && tp%S<=field.hp[4]%S)
+                            ok = false;
+                    if (!ok)
+                        continue;
 
-                //  通行不可にすることで、新たにペットを閉じ込めることができ、
-                //  ペット1匹あたりのマス数が30以下なら通行不可にする。
-                //  複数の方向で条件を満たすかもしれないので、即座に返すべきではないかも。
-                int n = 0;
-                int a = 0;
-                for (int p=0; p<N; p++)
-                    if (D1[field.px[p]][field.py[p]]<oo &&
-                        D3[field.px[p]][field.py[p]]==oo)
-                    {
-                        n++;
-                        field.F[tx][ty] = 1;
-                        a += field.get_area(field.px[p], field.py[p]);
-                        field.F[tx][ty] = 0;
-                    }
-                if (n>0 &&
-                    a/n <= 30)
-                    return d+4;
-                //  ペットを閉じ込めてマス数が上記の条件より大きい場合は不可。
-                if (n>0 &&
-                    a/n > 30)
-                    continue;
+                    field.F[tp] = 1;
+                    field.get_distances(S/2*S+0, &D3);
+                    field.F[tp] = 0;
 
-                //  (SX/2, 0)から(px, py)の最短経路上で、(px, py)からの距離が2、
-                //  もしくは、距離が3でペットの移動回数が奇数なら通行不可にする。
-                if (D1[tx][ty]==pd-2 && D2[tx][ty]==2 ||
-                    D1[tx][ty]==pd-3 && D2[tx][ty]==3 && (field.pt[target]==TYPE_COW || field.pt[target]==TYPE_RABBIT))
-                    moves.push_back(d+4);
+                    //  通行不可にしたことで人が閉じ込められるなら不可
+                    for (int h=0; h<M && ok; h++)
+                        if (D1[field.hp[h]]<oo &&
+                            D3[field.hp[h]]==oo)
+                            ok = false;
+                    if (!ok)
+                        continue;
+
+                    //  通行不可にすることで、新たにペットを閉じ込めることができ、
+                    //  ペット1匹あたりのマス数が30以下なら通行不可にする。
+                    //  複数の方向で条件を満たすかもしれないので、即座に返すべきではないかも。
+                    int n = 0;
+                    int a = 0;
+                    for (int p=0; p<N; p++)
+                        if (D1[field.pp[p]]<oo &&
+                            D3[field.pp[p]]==oo)
+                        {
+                            n++;
+                            field.F[tp] = 1;
+                            a += field.get_area(field.pp[p]);
+                            field.F[tp] = 0;
+                        }
+                    if (n>0 &&
+                        a/n <= 30)
+                        return d+4;
+                    //  ペットを閉じ込めてマス数が上記の条件より大きい場合は不可。
+                    if (n>0 &&
+                        a/n > 30)
+                        continue;
+
+                    //  (SX/2, 0)から(px, py)の最短経路上で、(px, py)からの距離が2、
+                    //  もしくは、距離が3でペットの移動回数が奇数なら通行不可にする。
+                    if (D1[tp]==pd-2 && D2[tp]==2 ||
+                        D1[tp]==pd-3 && D2[tp]==3 && (field.pt[target]==TYPE_COW || field.pt[target]==TYPE_RABBIT))
+                        moves.push_back(d+4);
+                }
             }
-        }
 
         if (moves.empty())
         {
             if ((field.pt[target]==TYPE_COW || field.pt[target]==TYPE_RABBIT) &&
-                D1[hx][hy]==pd-2 &&
-                D2[hx][hy]==2)
+                D1[hp]==pd-2 &&
+                D2[hp]==2)
                 //  目標が奇数回移動で、距離2のマスにいるなら移動しない
                 ;
             else
             {
                 //  距離3のマスに近づく
-                vector<int> SX, SY;
-                for (int x=0; x<S; x++)
-                    for (int y=0; y<S; y++)
-                        if (D1[x][y]==pd-3 &&
-                            D2[x][y]==3)
-                        {
-                            SX.push_back(x);
-                            SY.push_back(y);
-                        }
+                vector<int> SP;
+                for (int p=0; p<S*S; p++)
+                    if (D1[p]==pd-3 &&
+                        D2[p]==3)
+                        SP.push_back(p);
 
-                if (!SX.empty())
+                if (!SP.empty())
                 {
-                    field.get_distances(SX, SY, &D3);
+                    field.get_distances(SP, &D3);
 
                     for (int d=0; d<4; d++)
-                    {
-                        int tx = hx+dir_x[d];
-                        int ty = hy+dir_y[d];
-                        if (0<=tx && tx<S && 0<=ty && ty<S &&
-                            D3[tx][ty]==D3[hx][hy]-1 &&
-                            field.F[tx][ty]==0)
-                            moves.push_back(d);
-                    }
+                        if (field.can_move(hp, d))
+                        {
+                            int tp = hp+dir[d];
+                            if (D3[tp]==D3[hp]-1 &&
+                                field.F[tp]==0)
+                                moves.push_back(d);
+                        }
                 }
             }
         }
@@ -913,22 +888,19 @@ struct AI
     int get_moves_score_up(Field &field)
     {
         int h = field.turn_sub;
-        int hx = field.hx[h];
-        int hy = field.hy[h];
+        int hp = field.hp[h];
 
         long long score = field.score();
         int move = STAY;
 
         for (int d=0; d<4; d++)
         {
-            int tx = hx+dir_x[d];
-            int ty = hy+dir_y[d];
-            if (0<=tx && tx<S && 0<=ty && ty<S &&
-                field.can_block(tx, ty))
+            int tp = hp+dir[d];
+            if (field.can_block(tp))
             {
-                field.F[tx][ty] = 1;
+                field.F[tp] = 1;
                 long long s = field.score();
-                field.F[tx][ty] = 0;
+                field.F[tp] = 0;
                 if (s>score)
                 {
                     score = s;
@@ -963,7 +935,14 @@ int main()
         hy[i]--;
     }
 
-    Field field(px, py, pt, hx, hy);
+    vector<int> pp(N);
+    for (int i=0; i<N; i++)
+        pp[i] = px[i]*S+py[i];
+    vector<int> hp(M);
+    for (int i=0; i<M; i++)
+        hp[i] = hx[i]*S+hy[i];
+
+    Field field(pp, pt, hp);
     AI ai(field);
 
     for (int t=0; t<T; t++)
@@ -1000,7 +979,7 @@ int main()
     int UPC[5] = {};
     int s = 0;
     for (int p=0; p<N; p++)
-        if (field.toward(field.px[p], field.py[p], S/2, 0)!=-1)
+        if (field.toward(field.pp[p], S/2*S+0)!=-1)
         {
             UPC[field.pt[p]]++;
             s++;
