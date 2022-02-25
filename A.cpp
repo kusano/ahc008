@@ -319,63 +319,79 @@ struct AI
                 gate_num++;
         gate_num = min(gate_num, 14);
 
+        if (gate_num<=1)
+            gate_num = 0;
+
         current_gate = gate_num-1;
 
-        //  人を割り当てる。
-        //  ゲートができるまで機能しないので、途中から離れる人を優先する。
-        vector<int> idx{4,               2,           3,           0,           1          };
-        vector<int> gp {(S/2-1)*S+(S-2), (S/2-2)*S+2, (S/2+1)*S+2, (S/2-1)*S+2, (S/2  )*S+2};
-        vector<bool> U(M);
-        P.resize(5);
-        for (int i=0; i<5; i++)
+        if (gate_num>0)
         {
-            int dmin = oo;
-            int h;
-            for (int j=0; j<M; j++)
-                if (!U[j])
-                {
-                    int d = abs(field.hp[j]/S-gp[i]/S)+abs(field.hp[j]%S-gp[i]%S);
-                    if (d<dmin)
-                    {
-                        dmin = d;
-                        h = j;
-                    }
-                }
-            P[idx[i]] = h;
-            U[h] = true;
-        }
-        //  残りの人は、上に近い人を偶数、下に近い人を奇数に振り分ける。
-        vector<pair<int, int>> V;
-        for (int i=0; i<M; i++)
-            if (!U[i])
-                V.push_back({field.hp[i]/S, i});
-        sort(V.begin(), V.end());
-        while (!V.empty())
-        {
-            P.push_back(V.back().second);
-            V.pop_back();
-            if (!V.empty())
+            //  人を割り当てる。
+            //  ゲートができるまで機能しないので、途中から離れる人を優先する。
+            vector<int> idx{4,               2,           3,           0,           1          };
+            vector<int> gp {(S/2-1)*S+(S-2), (S/2-2)*S+2, (S/2+1)*S+2, (S/2-1)*S+2, (S/2  )*S+2};
+            vector<bool> U(M);
+            P.resize(5);
+            for (int i=0; i<5; i++)
             {
-                P.push_back(V.front().second);
-                V.erase(V.begin());
+                int dmin = oo;
+                int h;
+                for (int j=0; j<M; j++)
+                    if (!U[j])
+                    {
+                        int d = abs(field.hp[j]/S-gp[i]/S)+abs(field.hp[j]%S-gp[i]%S);
+                        if (d<dmin)
+                        {
+                            dmin = d;
+                            h = j;
+                        }
+                    }
+                P[idx[i]] = h;
+                U[h] = true;
+            }
+            //  残りの人は、上に近い人を偶数、下に近い人を奇数に振り分ける。
+            vector<pair<int, int>> V;
+            for (int i=0; i<M; i++)
+                if (!U[i])
+                    V.push_back({field.hp[i]/S, i});
+            sort(V.begin(), V.end());
+            while (!V.empty())
+            {
+                P.push_back(V.back().second);
+                V.pop_back();
+                if (!V.empty())
+                {
+                    P.push_back(V.front().second);
+                    V.erase(V.begin());
+                }
+            }
+
+            for (int i=0; i<M; i++)
+            {
+                bool ok = true;
+                for (int x: P)
+                    if (x==i)
+                        ok = false;
+                if (ok)
+                    P.push_back(i);
+            }
+
+            states = vector<int>(M);
+            for (int h=0; h<5; h++)
+                states[0] = STATE_PREPARE;
+            for (int h=5; h<M; h++)
+                states[h] = STATE_CHASE;
+        }
+        else
+        {
+            P = vector<int>(M);
+            states = vector<int>(M);
+            for (int h=0; h<M; h++)
+            {
+                P[h] = h;
+                states[h] = STATE_CHASE;
             }
         }
-
-        for (int i=0; i<M; i++)
-        {
-            bool ok = true;
-            for (int x: P)
-                if (x==i)
-                    ok = false;
-            if (ok)
-                P.push_back(i);
-        }
-
-        states = vector<int>(M);
-        for (int h=0; h<5; h++)
-            states[0] = STATE_PREPARE;
-        for (int h=5; h<M; h++)
-            states[h] = STATE_CHASE;
 
         D1 = D2 = D3 = D4 = vector<int>(S*S);
 
@@ -674,102 +690,152 @@ struct AI
 
         field.get_distances(S/2*S+0, &D1);
 
-        if (target!=-1)
+        if (gate_num>0)
         {
-            //  ペットが閉じ込められた。
-            if (D1[field.pp[target]]==oo)
-                target = -1;
-
-            //  ペットが下半分／上半分に逃げた。
-            if (targets_up_down[h]==0 && field.pp[target]/S>=S/2 ||
-                targets_up_down[h]==1 && field.pp[target]/S<S/2)
-                target = -1;
-        }
-
-        if (target==-1)
-        {
-            //  残りが猫だけになったら、猫も追う。
-            bool cat_only = false;
-            for (int p=0; p<N; p++)
-                if (field.pt[p]==TYPE_CAT &&
-                    D1[field.pp[p]]<oo)
-                    cat_only = true;
-            for (int p=0; p<N; p++)
-                if (field.pt[p]!=TYPE_CAT &&
-                    D1[field.pp[p]]<oo)
-                    cat_only = false;
-
-            for (int i=0; i<2 && target==-1; i++)
+            if (target!=-1)
             {
-                ////  犬を誘導するため、捕まっていない犬がいるなら、もう半分にはいかない
-                //if (i==1)
-                //{
-                //    bool ok = true;
-                //    for (int p=0; p<N; p++)
-                //        if (field.pt[p]==TYPE_DOG &&
-                //            D1[field.pp[p]]<oo)
-                //            ok = false;
-                //    if (!ok)
-                //        continue;
-                //}
+                //  ペットが閉じ込められた。
+                if (D1[field.pp[target]]==oo)
+                    target = -1;
 
-                for (int j=0; j<2 && target==-1; j++)
+                //  ペットが下半分／上半分に逃げた。
+                if (targets_up_down[h]==0 && field.pp[target]/S>=S/2 ||
+                    targets_up_down[h]==1 && field.pp[target]/S<S/2)
+                    target = -1;
+            }
+
+            if (target==-1)
+            {
+                //  残りが猫だけになったら、猫も追う。
+                bool cat_only = false;
+                for (int p=0; p<N; p++)
+                    if (field.pt[p]==TYPE_CAT &&
+                        D1[field.pp[p]]<oo)
+                        cat_only = true;
+                for (int p=0; p<N; p++)
+                    if (field.pt[p]!=TYPE_CAT &&
+                        D1[field.pp[p]]<oo)
+                        cat_only = false;
+
+                for (int i=0; i<2 && target==-1; i++)
                 {
-                    int up_down;
-                    if (i==0 && h%2==0 ||
-                        i==1 && h%2!=0)
-                        up_down = 0;
-                    else
-                        up_down = 1;
+                    ////  犬を誘導するため、捕まっていない犬がいるなら、もう半分にはいかない
+                    //if (i==1)
+                    //{
+                    //    bool ok = true;
+                    //    for (int p=0; p<N; p++)
+                    //        if (field.pt[p]==TYPE_DOG &&
+                    //            D1[field.pp[p]]<oo)
+                    //            ok = false;
+                    //    if (!ok)
+                    //        continue;
+                    //}
 
-                    int dmax = 0;
-                    for (int p=0; p<N; p++)
+                    for (int j=0; j<2 && target==-1; j++)
                     {
-                        //  まずは他の人と違うペットを狙う
-                        if (j==0)
-                        {
-                            bool ok = true;
-                            for (int t: targets)
-                                if (t==p)
-                                    ok = false;
-                            if (!ok)
-                                continue;
-                        }
+                        int up_down;
+                        if (i==0 && h%2==0 ||
+                            i==1 && h%2!=0)
+                            up_down = 0;
+                        else
+                            up_down = 1;
 
-                        int pp = field.pp[p];
-                        //  犬猫はゲートで捕まえるので狙わない。
-                        //  ゲートを使い切っていれば、狙う。
-                        if (((current_gate==0 || field.pt[p]!=TYPE_DOG) &&
-                             (current_gate==0 || cat_only || field.pt[p]!=TYPE_CAT)) &&
-                            (up_down==0 && pp/S<S/2 ||
-                             up_down==1 && pp/S>=S/2) &&
-                            D1[pp]<oo &&
-                            D1[pp]>dmax)
+                        int dmax = 0;
+                        for (int p=0; p<N; p++)
                         {
-                            dmax = D1[pp];
-                            target = p;
-                            targets_up_down[h] = up_down;
+                            //  まずは他の人と違うペットを狙う
+                            if (j==0)
+                            {
+                                bool ok = true;
+                                for (int t: targets)
+                                    if (t==p)
+                                        ok = false;
+                                if (!ok)
+                                    continue;
+                            }
+
+                            int pp = field.pp[p];
+                            //  犬猫はゲートで捕まえるので狙わない。
+                            //  ゲートを使い切っていれば、狙う。
+                            if (((current_gate==0 || field.pt[p]!=TYPE_DOG) &&
+                                 (current_gate==0 || cat_only || field.pt[p]!=TYPE_CAT)) &&
+                                (up_down==0 && pp/S<S/2 ||
+                                 up_down==1 && pp/S>=S/2) &&
+                                D1[pp]<oo &&
+                                D1[pp]>dmax)
+                            {
+                                dmax = D1[pp];
+                                target = p;
+                                targets_up_down[h] = up_down;
+                            }
                         }
                     }
                 }
             }
-        }
 
-        if (target==-1)
-        {
-            //  犬の誘導のため、ゲートを閉める人の待機場所近くに行く。
-            //  犬が多いとゲートが詰まるので、待機場所の少し右。
-            int m = -1;
-            for (int y=min(S-1, current_gate*2+6); y>=current_gate*2 && m==-1; y--)
+            if (target==-1)
             {
-                if (h%2==0)
-                    m = field.toward((S/2-4)*S+y);
-                else
-                    m = field.toward((S/2+3)*S+y);
+                //  犬の誘導のため、ゲートを閉める人の待機場所近くに行く。
+                //  犬が多いとゲートが詰まるので、待機場所の少し右。
+                int m = -1;
+                for (int y=min(S-1, current_gate*2+6); y>=current_gate*2 && m==-1; y--)
+                {
+                    if (h%2==0)
+                        m = field.toward((S/2-4)*S+y);
+                    else
+                        m = field.toward((S/2+3)*S+y);
+                }
+                if (m==-1)
+                    m = STAY;
+                return m;
             }
-            if (m==-1)
-                m = STAY;
-            return m;
+        }
+        else
+        {
+            //  ゲートを作らないとき
+            if (target!=-1 &&
+                D1[field.pp[target]]==oo)
+                target = -1;
+
+            if (target==-1)
+            {
+                for (int i=0; i<2 && target==-1; i++)
+                {
+                    for (int j=0; j<2 && target==-1; j++)
+                    {
+                        int dmax = 0;
+                        for (int p=0; p<N; p++)
+                        {
+                            //  まずは他の人と違うペットを狙う
+                            if (i==0)
+                            {
+                                bool ok = true;
+                                for (int t: targets)
+                                    if (t==p)
+                                        ok = false;
+                                if (!ok)
+                                    continue;
+                            }
+
+                            //  犬猫は後回し
+                            if (j==0 &&
+                                (field.pt[p]==TYPE_DOG || field.pt[p]==TYPE_CAT))
+                                continue;
+
+                            int pp = field.pp[p];
+                            if (D1[pp]<oo &&
+                                D1[pp]>dmax)
+                            {
+                                dmax = D1[pp];
+                                target = p;
+                            }
+                        }
+                    }
+                }
+            }
+
+            if (target==-1)
+                return STAY;
         }
 
         field.get_distances(S/2*S+0, &D1);
@@ -788,28 +854,32 @@ struct AI
                 int tp = hp+dir[d];
                 if (field.can_block(tp))
                 {
-                    //  ゲート設置を邪魔しないか確認
-                    bool ok = true;
-                    if (S/2-4<=tp/S && tp/S<S/2+4 &&
-                        tp%S<current_gate*2+2)
-                        ok = false;
-                    if (tp/S==S/2-1 || tp/S==S/2)
-                        ok = false;
-                    // 先に設置してしまうと、ゲートによって隔離される可能性があるので、
-                    // 下側もゲート設置完了までは置かない。
-                    if ((tp/S==S/2-2 || tp/S==S/2+1) &&
-                        gate_num*2<=tp%S)
-                        if (states[4]==0 ||
-                            states[4]==1 && tp%S<=field.hp[4]%S)
+                    if (gate_num>0)
+                    {
+                        //  ゲート設置を邪魔しないか確認
+                        bool ok = true;
+                        if (S/2-4<=tp/S && tp/S<S/2+4 &&
+                            tp%S<current_gate*2+2)
                             ok = false;
-                    if (!ok)
-                        continue;
+                        if (tp/S==S/2-1 || tp/S==S/2)
+                            ok = false;
+                        // 先に設置してしまうと、ゲートによって隔離される可能性があるので、
+                        // 下側もゲート設置完了までは置かない。
+                        if ((tp/S==S/2-2 || tp/S==S/2+1) &&
+                            gate_num*2<=tp%S)
+                            if (states[4]==0 ||
+                                states[4]==1 && tp%S<=field.hp[4]%S)
+                                ok = false;
+                        if (!ok)
+                            continue;
+                    }
 
                     field.F[tp] = 1;
                     field.get_distances(S/2*S+0, &D3);
                     field.F[tp] = 0;
 
                     //  通行不可にしたことで人が閉じ込められるなら不可
+                    bool ok = true;
                     for (int h=0; h<M && ok; h++)
                         if (D1[field.hp[h]]<oo &&
                             D3[field.hp[h]]==oo)
