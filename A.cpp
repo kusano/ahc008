@@ -317,7 +317,8 @@ struct AI
             if (field.pt[i]==TYPE_DOG ||
                 field.pt[i]==TYPE_CAT)
                 gate_num++;
-        gate_num = min(gate_num, 14);
+        //  ゲートが多すぎると、犬猫が通る可能性が下がって効率が悪い。
+        gate_num = min(gate_num, 9);
 
         current_gate = gate_num-1;
 
@@ -738,8 +739,9 @@ struct AI
 
                         int pp = field.pp[p];
                         //  犬猫はゲートで捕まえるので狙わない。
-                        if ((field.pt[p]!=TYPE_DOG &&
-                             (cat_only || field.pt[p]!=TYPE_CAT)) &&
+                        //  ゲートを使い切っていれば、狙う。
+                        if (((current_gate==0 || field.pt[p]!=TYPE_DOG) &&
+                             (current_gate==0 || cat_only || field.pt[p]!=TYPE_CAT)) &&
                             (up_down==0 && pp/S<S/2 ||
                              up_down==1 && pp/S>=S/2) &&
                             D1[pp]<oo &&
