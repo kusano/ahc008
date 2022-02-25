@@ -317,8 +317,7 @@ struct AI
             if (field.pt[i]==TYPE_DOG ||
                 field.pt[i]==TYPE_CAT)
                 gate_num++;
-        //  ゲートが多すぎると、犬猫が通る可能性が下がって効率が悪い。
-        gate_num = min(gate_num, 9);
+        gate_num = min(gate_num, 14);
 
         current_gate = gate_num-1;
 
