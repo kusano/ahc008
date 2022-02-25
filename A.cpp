@@ -1016,6 +1016,16 @@ int main()
     Field field(pp, pt, hp);
     AI ai(field);
 
+    cout<<"#";
+    for (int i=0; i<N; i++)
+        cout<<" 1";
+    cout<<endl;
+    cout<<"#";
+    for (int i=0; i<M; i++)
+        cout<<" 1";
+    cout<<endl;
+    cout<<"# "<<field.score()<<endl;
+
     for (int t=0; t<T; t++)
     {
         vector<int> moves = ai.get_moves(field);
@@ -1028,10 +1038,13 @@ int main()
         }
         cout<<ans<<endl;
 
+        cout<<"#";
         for (int i=0; i<N; i++)
         {
             string move;
             cin>>move;
+            cout<<" "<<move;
+
             vector<int> movei;
             for (char m: move)
                 for (int d=0; d<4; d++)
@@ -1039,6 +1052,19 @@ int main()
                         movei.push_back(d);
             field.move(movei);
         }
+        cout<<endl;
+
+        vector<int> D(S*S);
+        field.get_distances(S/2*S+0, &D);
+        cout<<"#";
+        for (int i=0; i<N; i++)
+            cout<<" "<<int(D[field.pp[i]]<oo);
+        cout<<endl;
+        cout<<"#";
+        for (int i=0; i<M; i++)
+            cout<<" "<<int(D[field.hp[i]]<oo);
+        cout<<endl;
+        cout<<"# "<<field.score()<<endl;
     }
 
     fprintf(stderr, "Number of humans: %2d\n", M);

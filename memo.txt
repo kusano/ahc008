@@ -19,3 +19,5 @@ gate_num<=xのときにgate_num=0にすると
 1: 0.5167882142
 2: 0.5167548809
 3: 0.5073469443999999
+
+ffmpeg -r 30 -i out_%06d.png -b:v 100M -pix_fmt yuv420p out.mp4
